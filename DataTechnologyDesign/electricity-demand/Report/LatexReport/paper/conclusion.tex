@@ -1,0 +1,11 @@
+\section{Conclusion}\label{sec:conclusion}
+
+We built an end-to-end pipeline for daily electricity demand forecasting in Singapore, training and comparing eight model configurations on a 16-feature dataset covering weather, calendar, and autoregressive variables from February 2023 to December 2025. Our main takeaways are:
+
+\begin{enumerate}
+    \item \textbf{CatBoost-PPSO is the strongest model}, with $R^2 = 0.914$, MAE of 1{,}496.2\,MWh, RMSE of 1{,}895.5\,MWh, and MAPE of 0.89\% on the held-out test set.
+    \item \textbf{Fair tuning matters.} Giving every tree model the same PPSO budget revealed that the gain is large for CatBoost ($-$10.5\% RMSE), moderate for XGBoost ($-$6.4\%), and absent for Random Forest. This means CatBoost-PPSO's lead comes from the algorithm itself, not from receiving preferential optimisation.
+    \item \textbf{Autoregressive features carry most of the signal}; weather variables (temperature, humidity, CCI) add meaningful secondary information, consistent with Singapore's cooling-driven demand profile.
+    \item \textbf{The approach generalises}: CatBoost-PPSO, originally validated on hourly single-customer data \parencite{zhang2023catboostppso}, transfers well to daily national-level demand in an equatorial climate.
+    \item \textbf{From pipeline to product}: we deployed the best model in a web portal that offers retrospective accuracy reports and weather-driven demand outlooks, showing a viable path from research code to a decision-support tool for grid operators and energy planners.
+\end{enumerate}

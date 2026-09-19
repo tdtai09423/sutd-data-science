@@ -1,0 +1,234 @@
+---
+title: "Recommendation systems 2"
+author: "Bikramjit Das"
+date: "2025"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+    toc: yes
+    toc_depth: 2
+    number_sections: yes
+---
+
+
+First, we prepare the working environment.
+```{r}
+rm(list=ls()) # Clear the environment
+# setwd("...")  # Setup the working directory
+```
+
+
+# `ratings` dataset
+
+The data come from [grouples](https://grouplens.org), a research lab in the Department of Computer Science and Engineering at the University of Minnesota. We begin by loading the data. 
+
+```{r}
+ratings <- read.csv("ratings.csv")
+str(ratings)
+```
+
+A quick look at the dataframe:
+
+```{r}
+length(unique(ratings$userId))  
+length(unique(ratings$movieId)) 
+sort(unique(ratings$rating))    
+```
+
+The `ratings` dataframe consists of 100,023 observations of 3 variables (userId, movieId, and rating). We have 706 users, 8552 movies, and 100,023 ratings. Ratings go from 0.5 to 5.0, with 0.5 increments.
+
+Let's now look at the user behavior:
+
+```{r}
+max(table(ratings$userId)) 
+min(table(ratings$userId)) 
+```
+
+Users have rated from 20 to 2268 movies. Who has been watching them?
+
+```{r}
+which(table(ratings$userId)==2268)
+which(table(ratings$userId)==20)
+```
+
+Movies have from 1 to 337 ratings
+
+```{r}
+max(table(ratings$movieId))
+min(table(ratings$movieId))
+```
+
+
+# Data preparation
+
+Create an empty matrix with 706 rows (users) and 8552 columns (movies). We name the rows and columns with the unique users and movieId in the dataset.
+
+```{r}
+Data <- matrix(nrow=length(unique(ratings$userId)), ncol=length(unique(ratings$movieId)))
+rownames(Data) <- unique(ratings$userId)
+colnames(Data) <- unique(ratings$movieId)
+```
+
+Now, let's fill in the matrix:
+
+```{r}
+for(i in 1:nrow(ratings))
+{Data[as.character(ratings$userId[i]),as.character(ratings$movieId[i])] <- ratings$rating[i]}
+# dim(Data)
+```
+
+Visual check: how are the rating distributed?
+
+```{r}
+hist(as.vector(Data))
+```
+
+Normalize the ratings of each user so that bias is reduced (`na.rm=TRUE` to omit the missing values).
+
+```{r}
+Datanorm <- Data - rowMeans(Data,na.rm=TRUE)
+```
+
+The histogram below shows that we now have a more symmetric rating. 
+
+```{r}
+hist(as.vector(Datanorm))
+```
+
+Finally, we create a matrix with `spl1` + `spl1c` rows and `spl2` + `spl2c` columns
+ 
+```{r}
+
+set.seed(1)       
+spl1 <- sample(1:nrow(Data), 0.98*nrow(Data)) # spl1 has 98% of the rows
+spl1c <- setdiff(1:nrow(Data),spl1)           # spl1c has the remaining ones
+set.seed(2)
+spl2 <- sample(1:ncol(Data), 0.8*ncol(Data))  # spl2 has 80% of the columns
+spl2c <- setdiff(1:ncol(Data),spl2)           # spl2c has the rest
+```
+
+Check the dimensions
+
+```{r}
+length(spl1)  
+length(spl1c) 
+length(spl2)  
+length(spl2c) 
+```
+
+
+# Models
+
+We are going to create three different prediction models. But, first, we initialize the matrices that will contain the model predictions.
+
+```{r}
+Base1    <- matrix(nrow=length(spl1c), ncol=length(spl2c))
+Base2    <- matrix(nrow=length(spl1c), ncol=length(spl2c))
+UserPred <- matrix(nrow=length(spl1c), ncol=length(spl2c))
+```
+
+## Baseline model 1
+
+Average out the item rating for all users in the training set `spl1`:
+
+```{r}
+for(i in 1:length(spl1c))  
+{Base1[i,] <- colMeans(Data[spl1,spl2c], na.rm=TRUE)}
+```
+
+Note that all rows (users) contain the same information. E.g.:
+
+```{r}
+Base1[,1:10] 
+```
+
+## Baseline model 2
+
+Average over the user rating for all the items in the training set `spl2`:
+
+```{r}
+for(j in 1:length(spl2c)) 
+{Base2[,j] <- rowMeans(Data[spl1c,spl2], na.rm=TRUE)}
+```
+
+All columns (movies) contain the same information. E.g.:
+
+```{r}
+Base2[,1:10] 
+```
+
+## User-based model
+
+### Calculate the correlation between users
+
+Initialize matrices:
+
+```{r}
+Cor   <- matrix(nrow=length(spl1),ncol=1) # keeps track of the correlation between users
+Order <- matrix(nrow=length(spl1c), ncol=length(spl1)) # sort users in term of decreasing correlations
+```
+
+With this command, we create an `Order` matrix of dimensions 15x691, where each row corresponds to neighbors of the users in the `spl1c` in decreasing order of Pearson correlation. The `NA` accounts for users who have no common ratings of movies with the user.
+
+```{r, message=FALSE, warning=FALSE}
+for(i in 1:length(spl1c)){
+  for(j in 1:length(spl1)){
+      Cor[j] <- cor(Data[spl1c[i],spl2],Data[spl1[j],spl2],use = "pairwise.complete.obs")
+      }
+  V <- order(Cor, decreasing=TRUE, na.last=NA)
+  Order[i,] <- c(V, rep(NA, times=length(spl1)-length(V)))
+}
+```
+
+Let's check the results
+
+```{r}
+length(Cor)
+dim(Order)
+  Order[,1:20]
+ # Order[,500:520]
+ # Order[,671:691]
+```
+
+### Predictions
+
+Now, we compute user predictions by looking at the 250 nearest neighbours and averaging equally over all these user ratings in the items in `spl2c`:
+
+```{r}
+for(i in 1:length(spl1c))
+{UserPred[i,] <- colMeans(Data[spl1[Order[i,1:250]],spl2c], na.rm=TRUE)}    
+```
+
+Check:
+
+```{r}
+UserPred[,1:10]
+```
+
+
+## Compare the model performance
+
+Calculate the model error:
+
+```{r}
+RMSEBase1    <- sqrt(mean((Data[spl1c,spl2c] - Base1)^2, na.rm=TRUE)) 
+RMSEBase2    <- sqrt(mean((Data[spl1c,spl2c] - Base2)^2, na.rm= TRUE)) 
+RMSEUserPred <- sqrt(mean((Data[spl1c,spl2c] - UserPred)^2,na.rm=TRUE)) 
+```
+
+Oddly enough, the base model 1seems to still perform better. So we try something else now. We vary the neighborhood set for the third model to see whether it positively affects the results.
+
+```{r}
+RMSE <- rep(NA, times=490)
+for(k in 10:499)
+{for(i in 1:length(spl1c))
+{UserPred[i,] <- colMeans(Data[spl1[Order[i,1:k]],spl2c], na.rm=TRUE)}
+  RMSE[k-10] <- sqrt(mean((Data[spl1c,spl2c] - UserPred)^2,na.rm=TRUE))}
+plot(10:499,RMSE,pch=20,lwd=0.5)
+```
+
+```{r}
+min(RMSE,na.rm=TRUE)
+which.min(RMSE)
+```

@@ -1,0 +1,281 @@
+---
+title: "Moneyball Notebook"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+Let us see what Paul DePodesta did with all the previous years data:
+The dataset consists of 420 observations of 17 variables consisting of:
+Team = Name of team, 
+League = American or National league, 
+Year ( from 1999 to 2012), 
+Games = Number of games played by each team in that year,
+W = Number of wins, 
+RS = Runs scored, 
+RA = Runs against, 
+OBP = On base percentage, 
+SLG = Slugging percentage, 
+BA = Batting Average, 
+OPS = On base plus slugging, 
+OOBP = Opposition on base percentage, 
+OSLG = Opposition slugging percentage, 
+OOPS = Opposition on base plus slugging, 
+Playoffs = 1 if teams makes playoff and 0 otherwise, 
+RankSeason = Rank in season,
+RankPlayoffs = Rank in playoffs.
+
+$$\\[0.3in]$$
+**Understanding the data**
+
+Let us first read the data:
+```{r}
+baseball <- read.csv("./baseball.csv")
+str(baseball)
+summary(baseball)
+```
+Paul DePodesta reduced the planning problem for the upcoming season to a mathematics problem.
+
+Question that motivated him: What would it take to make the playoffs?
+
+```{r}
+table(baseball$Year)
+baseball2002 <- subset(baseball, Year < 2002)
+str(baseball2002)
+```
+Let us look at how many games are needed to be won to make playoffs.
+
+```{r}
+library(ggplot2)
+ggplot(baseball2002)+ geom_point(aes(W,Team))
+ggplot(baseball2002)+ geom_point(na.rm=T,aes(W,Team,color=as.factor(Playoffs))) +
+   scale_color_manual(name="Playoffs",values=c("black","orange"),labels=c("No","Yes")) +  geom_vline(xintercept=95,color="blue",lwd=1) + geom_vline(xintercept=85,color="lightblue",lwd=1) 
+```
+Paul De Podesta judged that it would take around 95 games to make it to playoffs. If they won 95 games and still could not make it to playoffs, then that was just bad luck. So how many runs needed to be scored for and against to win so many games? Bill James, the founder of sabermetrics had earlier noticed that over time, there was a fairly stable relationship between the total runs difference in a season for a team (for-against) and the number of wins.
+```{r}
+baseball2002$RD <- baseball2002$RS-baseball2002$RA
+ggplot(baseball2002,aes(RD,W))+geom_point()+geom_smooth(method="lm",se=F)
+model1 <- lm(W~RD,data=baseball2002)
+summary(model1)
+```
+What do you notice about the outputs of anova? (extra)
+Here, $$F = \frac{MSR}{MSE}$$ where MSR is the mean square of regression and MSE is the mean square of error.
+F-statistic: F on y and z DF. y = number of variables, z = nrow - y - 1
+reference: https://stats.stackexchange.com/questions/499104/different-output-between-summarylm-and-anovalm-in-r
+```{r}
+model1 <- lm(W~RD+OBP,data=baseball2002)
+summary(model1)
+anova(model1)
+model2 <- lm(W~OBP+RD,data=baseball2002)
+summary(model2)
+anova(model2)
+
+```
+The result indicates a linear fit of the form $$W = 80.92 + 0.099*RD.$$ 
+To get to playoffs, one need 95 wins (most of the time) and putting in the formula:
+```{r}
+RDreqd<-(95-80.92)/0.099
+RDreqd
+```
+To have 95 wins, you needed around 142 runs difference. In the book, it is stated that Paul Podesta estimated this number to be around 135 (it would depend on the dataset he used),
+
+The summary indicates that slugging percentage and on-base percentage are on similar types of scales.
+```{r}
+summary(baseball2002$BA)
+summary(baseball2002$SLG)
+summary(baseball2002$OBP)
+summary(baseball2002$OPS)
+```
+Linear regression models: Predicting runs scored from OBP, SLG, BA and OPS.
+
+With one dependent variable:
+```{r}
+m1 <- lm(RS~OBP,data=baseball2002)
+summary(m1)
+m2 <- lm(RS~SLG,data=baseball2002)
+summary(m2)
+m3 <- lm(RS~OPS,data=baseball2002)
+summary(m3)
+m4 <- lm(RS~BA,data=baseball2002)
+summary(m4)
+```
+$$\\[0.3in]$$
+**Model Selection**
+
+Let's determine which are the important variables to add into our model:
+```{r}
+# Here I present two alternatives. I prefer the first one due to its ease of implementation
+library(MASS)
+mAIC <- lm(RS~OBP+SLG+BA+OPS,data=baseball2002)
+stepAIC(mAIC)
+
+# Second alternative. Harder to learn but gives more customization, can perform exhaustive search.
+library(leaps)
+mReg <- regsubsets(RS~OBP+SLG+BA+OPS, data=baseball2002)
+mRegdata <- summary(mReg)
+```
+Note that there was a warning: `1  linear dependencies foundnvmax reduced to  3Subset selection object`. This is because OBP+SLG=OPS.
+
+We can view the available data in `mRegdata` by using the down arrow in the global environment. We look for the subset with minimum cp. The cp statistic is closely related to AIC, where minimizing Mallow's CP is equivalent to minimizing the AIC. We see that the model with 2 variables minimizes the cp, hence the AIC. Regardless, we will test if adding BA improves the model in any regard.
+```{r}
+mRegdata
+mRegdata$cp # visual inspection is sufficient
+
+# Add `BA`
+m5 <- lm(RS~OBP+SLG, data=baseball2002)
+m6 <- lm(RS~OBP+SLG+BA, data=baseball2002)
+
+summary(m5)
+summary(m6)
+```
+The results indicate that the estimated beta coefficient for OBP is higher in comparison to SLG sugesting that an extra percentage point on base might be more valuable than an extra percentage point of slugging. Note that both variables are statistically significant. Note that OPS weighs them equally. Paul De Podesta decided that it was about three times as important. We also see that adding the extra BA variable in model m6 kept R squared about the same and slightly decreased adjusted R squared. Furthermore this variable is not statistically significant from the result (multicollinearity is a possible reason). We will hence stick to model m5.
+
+A similar analysis can be done for opposition performance.
+```{r}
+#summary(baseball2002)
+m5_Opp <- lm(RA~OOBP+OSLG,data=baseball2002)
+summary(m5_Opp)
+```
+$$\\[0.3in]$$
+**Predictions**
+
+The results support the claim in Moneyball that OBP and OOBP has a significant correlation with RS and RA. At the start of 2002, the team OBP = 0.339 and SLG = 0.43 based on player statistics. You can plug this in to the regression equation for model m5 to predict how many runs will be scored.
+```{r}
+TIME_SHIFT <- 500
+m5$coefficients
+RS_pred<- m5$coefficients[1]+m5$coefficients[2]*0.339+m5$coefficients[3]*0.43
+RS_pred
+```
+
+In the book Paul De Podesta predicted it to be between 800 and 820. 
+
+Similarly using opposition statistics, they estimated OOBP = 0.307 and OOSLG = 0.373. Plugging in you can estimate RA and then use the first model to predict the number of wins. 
+```{r}
+m5_Opp$coefficients
+RA_pred<- m5_Opp$coefficients[1]+m5_Opp$coefficients[2]*0.307+m5_Opp$coefficients[3]*0.373
+RA_pred
+```
+Now we can predict RD
+```{r}
+RD_pred<- RS_pred-RA_pred
+RD_pred
+```
+ 
+So RD is predicted to be 179. Using our model, then number of wins is given by:
+ 
+```{r}
+model1$coefficients
+W_pred<-80.92 + 0.099*179
+W_pred
+```
+
+In the book, Paul De Podesta predicted they would win between 93 and 97 games. We predict 98 games. They actually won 103.
+
+Since the whole formulation is based on the idea that Win(W) depends highly on the difference RS-RA and RS and RA separately are well predicted by the variables OBP,SLG and OOBP,OSLG respectively. In following lines we see how W is predicted when we combine all the four variables OBP,SLG,OOBP,OSLG together. This formulation may be difficult to interpret but for the fun of prediction we do the following :
+```{r}
+m8 <- lm(W~OBP+SLG+OOBP+OSLG, data=baseball2002)
+summary(m8)
+vals <- c(1, 0.339, 0.43, 0.307, 0.373)
+W_pred_all <- sum(m8$coefficients * vals)
+W_pred_all
+```
+$$\\[0.3in]$$
+**Optimization**
+
+Suppose you are the General Manager of a baseball team, and you are selecting two players for your team. You have a budget of $1,500,000, and you have the choice between the following players:
+
+Player's Name      OBP    SLG    Salary($)
+ Eric Chavez      0.338  0.540   1,400,000
+ Jeremy Giambi    0.391  0.450   1,065,000
+ Frank Menechino  0.369  0.374     295,000
+ Greg Myers       0.313  0.447     800,000
+ Carlos Pena      0.361  0.5       300,000
+
+```{r}
+Mat=matrix(c(0.338,0.391,0.369,0.313,0.361,0.540,0.450,0.374,0.447,0.5),nrow=5)
+# Scores given based on ability for run scoring
+RSP=Mat %*% m5$coefficients[2:3]
+RSP
+```
+
+We would select Jeremy Giambi and Carlos Pena, since they give the highest contribution to Runs Scored.
+
+We would not select Eric Chavez, since his salary consumes our entire budget, and although he has the highest SLG, there are players with better OBP.
+
+We would not select Frank Menechino since even though he has a high OBP, his SLG is low.
+
+We would not select Greg Myers since he is dominated by Carlos Pena in OBP and SLG, but has a much higher salary.
+
+$$\\[0.3in]$$
+
+**Additional exercises**
+
+1. Diving deeper into computation of the linear regression line.
+
+We know, from our lecture on linear regression that $$\hat{\beta}=(X'X)^{-1}X'Y.$$This can be used to manually find the coefficients of the linear regression line if the dataset is small. In this exercise, we will see how.
+You are given a dataset in the form (x, y): {(1, 0), (3, 2), (5, 6)}. 
+
+a) Write down the matrices for X and Y in the formula above, for two regression lines one for which it passes through the origin, and the other of which it does not.
+b) Using the formula given above, compute the coefficients for the two regression lines. You should be familiar enough with matrix operations, but you may not have done matrix inverse in R before. To perform matrix inverse in R, use the solve() function. Alternatively, since `X'X` is a `2X2` matrix, we can solve it analytically, where the inversion of a `2X2` matrix is given by $$X^{-1}=\frac{1}{ad-bc}\begin{pmatrix}
+d & -b\\
+-c & a
+\end{pmatrix}.$$
+c) Write down the codes used to perform linear regression and check if it corresponds with your solutions to (b).
+d) Plot the graphs of the points, as well as both the regression lines.
+e) Finally, compute the MSE for each of the regression lines.
+
+Sample solution for question 1.
+Parts (a) and (b)
+```{r}
+# For no intercept
+X1 = c(1, 3, 5) # 3X1 matrix
+Y1 = c(0, 2, 6) # 3X1 matrix
+coeff1 <- solve(t(X1) %*% X1) %*% t(X1) %*% Y1
+coeff1
+
+# Include intercept
+X2 = matrix(c(1, 1, 1, 1, 3, 5), ncol = 2) # 3X2 matrix
+Y2 = c(0, 2, 6) # 3X1 matrix
+coeff2 <- solve(t(X2) %*% X2) %*% t(X2) %*% Y2
+coeff2
+```
+
+Parts (c), (d) and (e)
+```{r}
+mydata <- data.frame(x = c(1, 3, 5), y = c(0, 2, 6))
+m1 <- lm(y~.-1, data = mydata)
+m2 <- lm(y~., data = mydata)
+m1
+m2
+
+plot(mydata, ylim = c(0,8), xlim = c(0,6))
+abline(0, m1$coefficients, col = "blue")
+abline(m2$coefficients)
+
+MSE1 <- mean((Y1 - predict(m1))^2)
+MSE2 <- mean((Y2 - predict(m2))^2)
+MSE1
+MSE2
+```
+
+
+2. Prediction of runs scored with the opponent's batting ability taken into consideration.
+
+Perform the same model selection analysis with RS as the independent variable (lines 107 - 130). For this exercise, include the opponents' team statistics, i.e. the variables OOBP, OSLG and OOPS using both stepAIC() and regsubsets(). Also, for regsubsets(), select the best model using adjr2 as the selection criteria.
+
+Does the opponent's team statistics play a role in determining the number of runs scored?
+
+Sample solution for question 2.
+```{r}
+library(MASS)
+mAIC <- lm(RS~OBP+SLG+BA+OPS+OOBP+OSLG+OOPS,data=baseball2002)
+stepAIC(mAIC)
+
+library(leaps)
+mReg <- regsubsets(RS~OBP+SLG+BA+OPS+OOBP+OSLG+OOPS, data=baseball2002)
+mRegdata <- summary(mReg)
+mRegdata
+mRegdata$adjr2
+```
+Both model selection methods point to OBP and SLG being the only variables we should keep. Having information about the opponents On base percentage, Slugging percentage and Batting Average seem to have no effect the predictive capabilities of our model, and worsen the fit of the regression model if we choose to add them.

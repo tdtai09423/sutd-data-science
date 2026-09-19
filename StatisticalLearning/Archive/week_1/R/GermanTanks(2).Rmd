@@ -1,0 +1,57 @@
+---
+title: "German Tanks Simulation"
+author: "Bikramjit  Das"
+date: "16 September 2025"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+    toc: yes
+    toc_depth: 2
+    number_sections: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+T<- 250 ## actual number of tanks
+k<- 5 ## number of tanks seen
+n<- 500 ## number of simulations
+
+## n simulations of sample size k from 1,...,T
+tanks<-matrix(replicate(n,sample(1:T,k)),nrow=n,ncol=k,byrow = "TRUE") 
+
+## Initialize matrices for storing the estimates
+Ests<-matrix(rep(0,n*k),nrow=n,ncol=k)
+
+Ests[,1]<- apply(tanks,1,function(x) mean(x)+3*sqrt(var(x))) ## Estimator 1
+Ests[,2]<- apply(tanks,1,function(x) 2*mean(x)-1)            ## Estimator 2
+Ests[,3]<- apply(tanks,1,function(x) max(x))                 ## Estimator 3
+Ests[,4]<- apply(tanks,1,function(x) max(x)+min(x)-1)        ## Estimator 4
+Ests[,5]<- apply(tanks,1,function(x) (k+1)*max(x)/k-1)       ## Estimator 5
+
+mean_ests<-apply(Ests,2, function(x) mean(x))                ## Mean of the estimates
+
+sd_ests<-apply(Ests,2,function(x) sd(x))                     ## Sd of the estimates
+
+
+par(mfrow=c(2,3))
+for(i in 1:5)
+{hist(Ests[,i],density=FALSE,freq=T,breaks = 30, main="Histogram",xlab=paste("Estimate",i),xlim=c(0,500))
+  abline(v=250,col="red",lwd=3)
+  abline(v=mean_ests[i],col="blue",lwd=3)
+}
+
+
+dft<-data.frame(est=c("Est1","Est2","Est3","Est4","Est5"), mean=mean_ests,sd=sd_ests)
+
+
+
+print(dft,digits=5)
+#xtable(dft)
+
+```

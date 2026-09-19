@@ -1,0 +1,308 @@
+---
+title: "Bagging and Random Forests"
+author: "Bikramjit Das"
+date: "2025"
+output: 
+ html_document: 
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    highlight: tango
+geometry: margin=1in
+fontsize: 12pt
+linkcolor: blue    
+---
+
+First, we prepare the working environment.
+```{r}
+rm(list=ls()) # Clear the environment
+# setwd("...")  # Setup the working directory
+```
+
+
+# Data Preparation
+
+## The US Supreme Court dataset
+
+Recall that our goal is to predict justice justice Stevens' decision using six predictors. The output takes a value of 1 if Stevens' decision reverses the lower court decision and 0 if the judge affirms the lower court decision.
+
+```{r, message=FALSE}
+# Load data
+supreme <- read.csv("supreme.csv") # We have 623 observations and 20 variables
+# str(supreme)      # Internal structure of the dataframe 
+# head(supreme)     # First part of the dataframe
+
+# Prepare the output variable (justice Stevens' decision)
+stevens <- subset(supreme[,c("docket","term","stevdir","petit","respon","circuit","unconst","lctdir","issue","result")],supreme$stevdir!=9)
+stevens$rev <- as.integer((stevens$lctdir=="conser" & stevens$stevdir==0) | (stevens$lctdir=="liberal" & stevens$stevdir==1))
+```
+
+## Splitting the dataset
+
+To split the data into two groups (for training and testing), we use the package `caTools`.
+
+```{r, message=FALSE}
+if(!require(caTools)){                          # install or load the package
+  install.packages("caTools")
+  library(caTools)
+}
+set.seed(123)                                   # set seed for random sampling
+spl <- sample.split(stevens$rev,SplitRatio=0.7) # We use 70% of the data for training
+train <- subset(stevens,spl==TRUE);             # training dataset
+test <- subset(stevens,spl==FALSE);             # testing dataset
+test <- subset(test,test$issue!="IR")           # remove the only realization of the IR value (please refer to previous week's material)
+```
+
+## Benchmark model (CART)
+
+Our benchmark model is a CART. Recall that to properly build a Classification Tree, we first grow a deep tree and then check whether it is necessary to prune it.
+
+```{r}
+library(rpart)
+cart1 <- rpart(rev~petit+respon+circuit+lctdir+issue+unconst,data=train,method="class") # build the tree
+predictcart1 <- predict(cart1,newdata=test,type="class") # prediction on the test dataset
+table(test$rev,predictcart1) # confusion matrix
+
+Acc_CART<-sum(diag(table(test$rev,predictcart1)))/sum(table(test$rev,predictcart1))
+Acc_CART
+```
+The model accuracy is ```r sum(diag(table(test$rev,predictcart1)))/sum(table(test$rev,predictcart1))```.
+
+```{r}
+opt <- which.min(cart1$cptable[,"xerror"]) # get index of CP with lowest xerror
+cp <- cart1$cptable[opt, "CP"]             # get the corresponding value
+cart2 <- prune(cart1,cp)                   # prune
+predictcart2 <- predict(cart2,newdata=test,type="class") # prediction on the test dataset on the pruned tree
+table(test$rev,predictcart2)               # confusion matrix
+
+Acc_PrunedCART<-sum(diag(table(test$rev,predictcart2)))/sum(table(test$rev,predictcart2))
+Acc_PrunedCART
+
+```
+
+The model accuracy is ```r sum(diag(table(test$rev,predictcart2)))/sum(table(test$rev,predictcart2))```.
+
+
+# Bagging
+
+## R package
+
+```{r, message=FALSE}
+if(!require(ipred)){
+  install.packages("ipred")
+  library(ipred)
+}
+```
+
+## Building bagged trees
+
+The function `bagging` carries out the process of building the bootstrapped aggregated classification (and regression) trees. Note that, if we want to solve a classification problem, we need to specify that the output is a factor. If `coob` is TRUE, the out-of-bag sample is used to estimate the prediction error. Note that the default number of trees is equal to 25.
+
+```{r}
+set.seed(1)
+mt <- bagging (as.factor(rev)~petit+respon+circuit+lctdir+issue+unconst,data=train, coob=TRUE)
+```
+
+What's inside the object `mt`? To answer this question, we can use the function `summary()`, but keep in mind that this time we have 25 trees, so there's a lot of information available! The function `print()` gives us a shorter summary.
+
+```{r}
+?bagging
+# summary(mt) # long summary
+print(mt)     # short summary
+```
+
+## Testing bagged trees
+
+How well does this bagged model perform on the test set?
+
+```{r}
+predict_bag_model <- predict(mt,newdata=test,type="class")
+table(test$rev,predict_bag_model)
+
+
+Acc_bagCART<-sum(diag(table(test$rev,predict_bag_model)))/sum(table(test$rev,predict_bag_model))
+Acc_bagCART
+```
+
+The accuracy is ```r sum(diag(table(test$rev,predict_bag_model)))/sum(table(test$rev,predict_bag_model))```, a slight improvement w.r.t the Classification Tree.
+
+
+# Random Forests
+
+## Training and testing
+
+We begin by loading / installing the `randomForest` package.
+
+```{r, message=FALSE}
+if(!require(randomForest)){
+  install.packages("randomForest")
+  library(randomForest)
+}
+```
+
+By default, the function `randomForest()` uses $m = p/3$ variables when building a random forest of regression trees, and $m = \sqrt{p}$ variables when building a random forest of classification trees. The default number of trees is 500 (for both classification and regression). $m$ and the number of trees can be changed through the input parameters `mtry` and `ntree`.
+
+```{r}
+?randomForest
+set.seed(1)
+forest <- randomForest(as.factor(rev)~petit+respon+circuit+unconst+lctdir+issue,data=train)
+forest
+```
+
+How well does this model perform on the test set?
+
+```{r}
+predictforest <- predict(forest,newdata=test,type="class")
+table(test$rev,predictforest)
+Acc_RFCART<-sum(diag(table(test$rev,predictforest)))/sum(table(test$rev,predictforest))
+Acc_RFCART
+```
+
+The accuracy is ```r sum(diag(table(test$rev,predictforest)))/sum(table(test$rev,predictforest))```, which is very similar to the one of a Classification Tree.
+
+## A note on Bagging and Random Forests
+
+If `mtry` is equal to the total number $p$ of predictors (6, in our example), the Random Forest boils down to a forest of bagged trees. But, in practice, there might be some difference in the performance obtained with the packages `ipred` and `randomForest`, which are due to different bootstrapping techniques. In addition, recall that bootstrapping and bagging are randomized processes, so we can always expect some differences between two experiments. This is also why it is good practice to set the seed.
+
+## Variable importance
+
+Using the `importance()` function, we can view the importance of each predictor. The variables with the highest importance scores are the ones that give the best prediction and contribute most to the model.
+
+```{r}
+importance(forest) # tabulated results
+varImpPlot(forest) # plot
+```
+
+What does `MeanDecreaseGini` mean? This is a measure of how important a variable is for estimating the value of the target variable across all of the trees that make up the forest. A higher Mean Decrease in Gini indicates higher variable importance.
+
+Another option to quantify variable importance is simply to find out which predictor variables are actually used in the random forest. If `count=TRUE` and `by.tree=FALSE`, the function `varUsed` returns an integer vector containing frequencies that variables are used in the forest.
+
+```{r}
+varUsed(forest, by.tree=FALSE, count=TRUE)
+```
+
+Specifically, we get the frequency of the following variables: `petit`, `respon`, `circuit`, `unconst`, `lctdir`, and `issue`. Note that the frequency does not completely correspond to variable importance.
+
+
+## Setting the value of the hyperparameters
+
+Random Forests have three hyperparameters:
+
+- $m$ (`mtry`), the number of (randomly chosen) predictors used to split a node
+
+- $B$ (`ntree`), the number of trees in the forest
+
+- `nodesize`, the minimum size of the terminal leaves
+
+Because the default value may not necessarily yield the best performance, it is common practice to train and test Random Forests with different values of the hyper-parameters. Note that the task can be **computationally demanding** if we try many combinations of `mtry`, `ntree`, and `nodesize`. 
+
+Now the question is: how do we do it? Let's see a couple of options (in increasing order of complexity).
+
+### Writing our own code
+
+Here, we use a `for` loop for exploring the effect of `ntree` on the OOB error rate.
+
+```{r}
+# Values of ntree to be tested
+B <- seq(5,500,by=5)
+# Initialize a vector for the OOB value
+OOB <- vector(); OOB <- c(OOB, 1:length(B))
+# For loop
+for (i in 1:length(B)){
+  # train a forest with B[i] trees
+  forest_temp <- randomForest(as.factor(rev)~petit+respon+circuit+unconst+lctdir+issue,data=train,ntree=B[i])
+  # model performance
+  OOB[i] <- forest_temp$err.rate[B[i],1]
+  # remove the temporary variable
+  rm(forest_temp)
+}
+```
+
+As shown in the plot below, the OOB error seems to get more or less stable for a value of `ntree` larger than 200.
+
+```{r}
+library(ggplot2)
+ggplot(data = data.frame(ntree=B, error=OOB), 
+       mapping = aes(x = ntree, y = error)) + 
+  geom_point(size=3) +
+  coord_cartesian(xlim=c(0,500), ylim=c(0.325,0.450)) +
+  labs(x="Number of Trees", y="OOB error")
+```
+
+Now, we repeat the experiment, but changing both `mtry` and `ntree` at the same time.
+
+```{r}
+# Values of ntree to be tested
+B <- seq(5,500,by=5)
+# Values of mtry to be tested
+m <- seq(1,6,by=1)
+# Initialize a matrix for the OOB value
+OOB_matrix <- matrix(0,nrow=length(B),ncol=length(m))
+# For loop
+for (i in 1:length(B)){
+  for (j in 1:length(m)){
+    # train a forest with B[i] trees
+    forest_temp <- randomForest(as.factor(rev)~petit+respon+circuit+unconst+lctdir+issue,data=train,ntree=B[i],mtry=m[j])
+    # model performance
+    OOB_matrix[i,j] <- forest_temp$err.rate[B[i],1]
+    # remove the temporary variable
+    rm(forest_temp)
+    }
+}
+```
+
+The plot below shows that the range of variability of the OOB error is fairly narrow. We can also see that when `mtry = 1`, the OOB exhibits larger variance. For `mtry = 2`, such variability is reduced, especially for large values of `ntree`.
+
+```{r}
+library(reshape2)
+rownames(OOB_matrix) <- B
+colnames(OOB_matrix) <- m
+# longData <- as.data.frame(OOB_matrix)
+# row.names(longData) <- B; colnames(longData) <- m
+longData <- melt(OOB_matrix)
+# ...
+ggplot(longData, aes(x = Var1, y = Var2)) + 
+  geom_raster(aes(fill=value)) + 
+  scale_fill_gradient(low="grey90", high="red") +
+  labs(x="Number of Trees", y="Number of predictors")
+```
+
+Finally, let's train and test the model with the best OOB performance (and `mtry = 2`).
+
+```{r}
+which.min(OOB_matrix[,2])
+best_forest <- randomForest(as.factor(rev)~petit+respon+circuit+unconst+lctdir+issue,data=train,mtry=2,ntree=95)
+# best_forest
+predict_bestforest <- predict(best_forest,newdata=test,type="class")
+table(test$rev,predict_bestforest)
+
+
+Acc_RFCARTopt<-sum(diag(table(test$rev,predict_bestforest)))/sum(table(test$rev,predict_bestforest))
+Acc_RFCARTopt
+```
+
+The accuracy is ```r sum(diag(table(test$rev,predict_bestforest)))/sum(table(test$rev,predict_bestforest))``` ... unfortunately, not a dramatic change!
+
+
+### Using the `caret` package (optional)
+
+Grid search for `mtry`.
+
+```{r}
+library(caret)
+control <- trainControl(method="repeatedcv", number=10, repeats=1, search="grid")
+# set.seed(seed)
+tunegrid <- expand.grid(.mtry=c(1:6))
+rf_gridsearch <- train(as.factor(rev)~petit+respon+circuit+unconst+lctdir+issue, data=train, method="rf", metric="Accuracy", tuneGrid=tunegrid, trControl=control)
+print(rf_gridsearch)
+plot(rf_gridsearch)
+```
+
+
+
+
+
+
+
+
+

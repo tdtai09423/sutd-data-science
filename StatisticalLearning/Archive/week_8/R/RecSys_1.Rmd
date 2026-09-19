@@ -1,0 +1,236 @@
+---
+title: "Recommendation systems 1"
+subtitle: "Clustering techniques"
+author: "Bikramjit Das"
+date: "2025"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+    toc: yes
+    toc_depth: 2
+    number_sections: yes
+---
+
+First, we prepare the working environment.
+```{r}
+rm(list=ls()) # Clear the environment
+# setwd("...")  # Setup the working directory
+```
+
+
+# MovieLens dataset
+
+The data come from [grouplens](https://grouplens.org), a research lab in the Department of Computer Science and Engineering at the University of Minnesota.
+
+We begin by loading the data. Because the dataset contains strings, we use the option `stringsAsFactors=FALSE` (so as to make sure that character vectors are NOT converted into factors). The dataframe consists of two variables with 8569 movies with movieID and title.
+
+```{r}
+movies <- read.csv("movies.csv",stringsAsFactors=FALSE)
+str(movies)
+```
+
+A quick look at the dataframe:
+
+```{r}
+head(movies) # First part of the dataframe
+summary(movies) # Summary of the data
+```
+
+The movie genre is contained in a different file. To read it, we use the following commands:
+
+```{r}
+# Count the number of fields separated by "|" in each row of genres.csv
+countfields <- count.fields("genres.csv", sep="|") 
+# The first movie, for example has 5 genres listed
+countfields[1] 
+# With this command, we can see that movies have from 1 to 7 genres listed
+min(countfields)
+max(countfields)
+# Now, we load genres.csv. The command creates a dataframe with 8569 observations and 7 variables with column names X1 ... X7.
+genres <- read.csv("genres.csv", header=FALSE, sep="|", col.names=c("X1","X2","X3","X4","X5","X6","X7"), stringsAsFactors=TRUE)
+# Note that each variable has different number of levels
+str(genres) 
+```
+ 
+For this class, we need to work with a matrix having 8,569 rows and a number of columns equal to the number of genres. For each cell, we want to know whether a certain genre is associated (1) or not (0) to a certain movie. This requires some processing of the data contained in `genres`. We use a dedicated function to do it.
+
+```{r}
+# Source and run the function
+source('process_genre_data.R')
+M <- process_genre_data(genres)
+```
+
+Last step, we create a dataframe (named `Data`) with movie title and classification.
+
+```{r}
+Data <- as.data.frame(M)
+Data$title <- movies$title
+Data <- Data[,-19] # Drops the 19th column, which corresponds to the "" category
+```
+
+We are now ready for our clustering exercise.
+
+
+# Hierarchical clustering
+
+To run hierarchical clustering in R, we must follow two steps. First, we use the function `dist` to calculate the distance between movies using the first 19 columns (genres of movies).
+
+```{r}
+distances <- dist(Data[,1:19], method="euclidean")
+dim(Data)
+# length(distances)
+```
+
+Note that we computed `r 8569*8568/2` distances.
+
+Then, we execute hierarchical clustering. We use Ward's distance method to find compact clusters.
+
+```{r}
+clusterMovies1 <- hclust(distances, method="ward.D2")
+```
+
+Plot the dendrogram. We have several movies, so the lists at the bottom cannot be read.
+
+```{r}
+plot(clusterMovies1) 
+```
+
+Let's now cut the dendrogram into 10 clusters and compute the average value across the clusters for the Action variable. Higher value indicates many movies in the clusters are action movies.
+
+```{r}
+clusterGroups1 <- cutree(clusterMovies1, k=10)
+tapply(Data[,1], clusterGroups1, mean) 
+```
+
+Create a matrix "Cat1" where rows denote categories and columns indicate clusters
+
+```{r}
+Cat1 <- matrix(0,nrow=19,ncol=10)
+for(i in 1:19)
+{Cat1[i,] <- tapply(Data[,i], clusterGroups1, mean)}
+rownames(Cat1) <- colnames(Data)[1:19]
+Cat1
+```
+
+Looking at `Cat1`, we can infer that the 10 clusters are organized as follows:
+  
+* Cluster 1: Fantasy, Comedy, Children, Adventure
+* Cluster 2: Romance, Comedy, Drama
+* Cluster 3: Comedy
+* Cluster 4: Action, Drama, Thriller, Crime
+* Cluster 5: Thriller, Horror
+* Cluster 6: Drama
+* Cluster 7: Drama, Romance
+* Cluster 8: Drama, Thriller
+* Cluster 9: Action, Sci-fi
+* Cluster 10: Documentary
+
+Let's take a look at various movies
+
+```{r}
+# subset(Data$title, clusterGroups1==6)
+subset(Data, movies$title=="Grand Budapest Hotel, The (2014)")
+clusterGroups1[8418]
+subset(Data, movies$title=="Moneyball (2011)")
+clusterGroups1[7925]
+subset(Data, movies$title=="John Wick (2014)")
+clusterGroups1[8514]
+subset(Data, movies$title=="Star Trek (2009)")
+clusterGroups1[7293]
+
+```
+
+
+# K-means clustering
+
+This algorithm is not deterministic, so it is best practice to first set the seed.
+
+```{r}
+set.seed(1)
+```
+
+The following command performs a K-means clustering using k=10 and 20 random initial configurations (a random set of rows is chosen as initial centers).
+
+```{r}
+clusterMovies2 <- kmeans(Data[,1:19],centers=10,nstart=20)
+```
+
+Total within cluster sum of squares (we want this number to be small):
+
+```{r}
+clusterMovies2$tot.withinss
+clusterMovies2$totss
+
+```
+
+Let's try again, but, this time, with just one initial configuration:
+
+```{r}
+set.seed(1)
+clusterMovies3 <- kmeans(Data[,1:19],centers=10,nstart=1)
+clusterMovies3$tot.withinss 
+clusterMovies3$totss
+```
+
+We can see that picking more starting point is useful!
+
+Let's now vary the value of k and plot the error in the cluster as a function of k:
+
+```{r}
+set.seed(1)
+fit <- 0
+for(k in 1:20)
+{clusterMovies4 <- kmeans(Data[,1:19], centers=k, nstart=20)
+fit[k] <- clusterMovies4$tot.withinss}
+plot(1:20,fit)
+```
+
+Let's see the corresponding clusters:
+
+```{r}
+Cat2 <- matrix(0,nrow=19,ncol=10)
+for(i in 1:19)
+{Cat2[i,] <- tapply(Data[,i], clusterMovies2$cluster, mean)}
+rownames(Cat2) <- colnames(Data)[1:19]
+Cat2
+```
+
+
+
+Looking at `Cat1`, we can infer that the 10 clusters are organized as follows:
+  
+* Cluster 1: Crime, Drama, Thriller
+* Cluster 2: Adventure, Animation, Children, Comedy
+* Cluster 3: Drama
+* Cluster 4: Documentary
+* Cluster 5: Horror
+* Cluster 6: Action, Adventure
+* Cluster 7: Comedy, (Drama)
+* Cluster 8: Action, Thriller
+* Cluster 9: Comedy, Romance
+* Cluster 10: Horror, Thriller
+
+
+
+
+```{r}
+
+subset(Data, movies$title=="Grand Budapest Hotel, The (2014)")
+clusterMovies2$cluster[8418]
+subset(Data, movies$title=="Moneyball (2011)")
+clusterMovies2$cluster[7925]
+subset(Data, movies$title=="John Wick (2014)")
+clusterMovies2$cluster[8514]
+subset(Data, movies$title=="Star Trek (2009)")
+clusterMovies2$cluster[7293]
+
+```
+
+
+
+
+
+
+
+

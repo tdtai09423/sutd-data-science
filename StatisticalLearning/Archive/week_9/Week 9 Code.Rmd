@@ -1,0 +1,198 @@
+---
+title: "Test your knowledge of Clustering and Collaborative filtering"
+date: "Fall 2025"
+output:
+ html_document: 
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    highlight: tango
+geometry: margin=1in
+fontsize: 12pt
+linkcolor: blue    
+---
+
+# Question 1 
+## a) 
+There are a total of 11580 observations.
+```{r}
+stocks <- read.csv("StocksCluster.csv")
+str(stocks)
+```
+
+## b)
+54.6114 percent of the observations had positive returns in December 
+
+```{r}
+table(stocks$PositiveDec)/nrow(stocks)
+```
+
+## c)
+
+Maximum correlation = 0.1916727856. By observing the correlation matrix, we can see it is between the returns of October and November.
+```{r}
+a <- cor(stocks[,1:11])
+sort(cor(stocks[,1:11]))
+```
+
+## d)
+Maximum mean return is in April and minimum mean return is in September.
+
+```{r}
+colMeans(stocks[,1:11])
+which(colMeans(stocks[,1:11]) == max(colMeans(stocks[,1:11])))
+which(colMeans(stocks[,1:11]) == min(colMeans(stocks[,1:11])))
+```
+
+## e)
+
+Accuracy = 0.5711818
+```{r}
+library(caTools)
+set.seed(144)
+spl <- sample.split(stocks$PositiveDec, SplitRatio = .7)
+stocksTrain <- subset(stocks, spl == TRUE)
+stocksTest <- subset(stocks, spl == FALSE)
+stocksModel <- glm(PositiveDec ~ ., data = stocksTrain, family = "binomial")
+stocksPredict <- predict(stocksModel, newdata = stocksTrain, type = "response")
+table(stocksPredict >= 0.5, stocksTrain$PositiveDec)
+(990+3640)/(990+787+2689+3640)
+```
+## f)
+Accuracy on test set = 0.5670697 (close to what we see on the training set)
+
+```{r}
+stocksPredicttest <- predict(stocksModel, newdata = stocksTest, type = "response")
+table(stocksPredicttest >= .5, stocksTest$PositiveDec)
+(417+1553)/(417+344+1160+1553)
+```
+
+## g)
+
+Baseline model predicts positive return (majority in training set). Accuracy of this on test set = 0.5460564. 
+```{r}
+table(stocksTrain$PositiveDec)/nrow(stocksTrain)
+table(stocksTest$PositiveDec)/nrow(stocksTest)
+1897/(1897+1577)
+```
+
+## h)
+
+We remove the dependent variable in the clustering phase since needing to know the dependent variable in assigning an observation to a cluster defeats the purpose of the methodology (option iii).  
+
+```{r}
+limitedTrain <- stocksTrain
+limitedTrain$PositiveDec <- NULL
+limitedTest <- stocksTest
+limitedTest$PositiveDec <- NULL
+```
+
+## i)
+
+Mean of ReturnJan in training set = 0 (normalized) while in the test set it is -0.0004185886.
+
+```{r}
+#install.packages("caret")
+library(caret)
+preproc <- preProcess(limitedTrain)
+
+# for (i in ncol(limitedTrain)) {
+#   limitedTrain[, i] <- (limitedTrain[, i] - mean(limitedTrain[, i])) / sd(limitedTrain[, i])
+# }
+# 
+# for (i in ncol(limitedTrain)) {
+#   limitedTest[, i] <- (limitedTest[, i] - mean(limitedTrain[, i])) / sd(limitedTrain[, i])
+# }
+
+normTrain <- predict(preproc, limitedTrain)
+normTest <- predict(preproc, limitedTest)
+colMeans(normTrain)
+colMeans(normTest)
+```
+## j) 
+The mean is 0 in training set since the distribution in training and test set are not identical and normalization is done on the training set. 
+
+## k)
+Cluster 2 has the largest number of observations (4731).
+
+```{r}
+set.seed(144)
+km <- kmeans(normTrain, centers = 3)
+table(km$cluster)
+```
+
+## l)
+Cluster 2 has the 2029 observations in the test set.
+```{r}
+#install.packages("flexclust")
+library(flexclust)
+?as.kcca
+km.kcca <- as.kcca(km, normTrain)
+clusterTrain <- predict(km.kcca)
+clusterTest <- predict(km.kcca, newdata = normTest)
+table(clusterTest)
+table(clusterTrain)
+
+sum((normTest[1] - km$centers[1,])^2)
+sum((normTest[1] - km$centers[2,])^2)
+sum((normTest[1] - km$centers[3,])^2)
+```
+
+## m)
+stocksTrain1 (from cluster 1) has the highest average value of the dependent variable in the training set.
+
+```{r}
+stocksTrain1 <- subset(stocksTrain, clusterTrain == 1)
+stocksTrain2 <- subset(stocksTrain, clusterTrain == 2)
+stocksTrain3 <- subset(stocksTrain, clusterTrain == 3)
+stocksTest1 <- subset(stocksTest, clusterTest == 1)
+stocksTest2 <- subset(stocksTest, clusterTest == 2)
+stocksTest3 <- subset(stocksTest, clusterTest == 3)
+mean(stocksTrain1$PositiveDec)
+mean(stocksTrain2$PositiveDec)
+mean(stocksTrain3$PositiveDec)
+```
+
+## n)
+ReturnFeb, ReturnMar, ReturnJuly, ReturnSep have positive coefficient in one of the three models (at least) and negative coefficient in one of the three models (at least). 
+
+```{r}
+StocksModel1 <- glm(PositiveDec ~ ., data = stocksTrain1, family = "binomial")
+StocksModel2 <- glm(PositiveDec ~ ., data = stocksTrain2, family = "binomial")
+StocksModel3 <- glm(PositiveDec ~ ., data = stocksTrain3, family = "binomial")
+summary(StocksModel1)
+summary(StocksModel2)
+summary(StocksModel3)
+```
+
+## o)
+
+Accuracy is 0.6446125, 0.5250126 and 0.625323 respectively.
+```{r}
+PredictTest1 <- predict(StocksModel1, newdata = stocksTest1, type = "response")
+PredictTest2 <- predict(StocksModel2, newdata = stocksTest2, type = "response")
+PredictTest3 <- predict(StocksModel3, newdata = stocksTest3, type = "response")
+table1 <- table(PredictTest1 >= 0.5, stocksTest1$PositiveDec )
+table1
+(43+639)/(43+639+26+350)
+table2 <- table(PredictTest2 >= 0.5, stocksTest2$PositiveDec )
+table2
+(227+812)/(227+812+221+719)
+table3 <- table(PredictTest3 >= 0.5, stocksTest3$PositiveDec )
+table3
+(119+123)/(119+123+76+69)
+```
+
+## p)
+
+Overall accuracy = 0.5794473
+
+```{r}
+AllPredictions <- c(PredictTest1, PredictTest2, PredictTest3)
+AllOutcomes <- c(stocksTest1$PositiveDec, stocksTest2$PositiveDec, stocksTest3$PositiveDec)
+table4 <- table(AllPredictions >= 0.5, AllOutcomes)
+table4
+(439+1574)/(439+1574+323+1138)
+```
+
+##### End of Exercise

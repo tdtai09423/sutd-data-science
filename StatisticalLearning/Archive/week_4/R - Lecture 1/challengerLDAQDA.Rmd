@@ -1,0 +1,212 @@
+---
+title: "Classification: Challenger"
+subtitle: "LDA, QDA, Probit regression"
+author: "Bikramjit Das"
+date: "2025"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+    toc: yes
+    toc_depth: 2
+    number_sections: yes
+---
+
+# Introduction
+
+The dataset consists of 144 observations of 5 variables consisting of:  
+
+1. `Flight`: name of flight; 
+2. `Date`: date of flight;  
+3. `Field`: 1 if an O-ring fails and 0 otherwise;  
+4. `Temp`: Temperature in degrees Fahrenheit;   
+5. `Pres`: Leak check pressure in psi.   
+
+Each flight had 6 **O-rings**.
+
+## Data set
+
+```{r}
+rm(list=ls())
+orings <- read.csv("Orings.csv")
+str(orings)
+summary(orings)
+```
+
+## LDA
+
+We fit a linear regression model first.
+
+### Model with temperature and pressure
+```{r}
+library(MASS)
+lda1 <- lda(Field~Temp+Pres,data=orings)
+lda1
+```
+
+
+### Model with temperature
+
+```{r}
+lda2 <- lda(Field~Temp,data=orings)
+lda2
+```
+
+
+# Predictions
+
+## Prediction for LDA
+
+```{r}
+p.lda1<-predict(lda1,newdata=orings[144,]) 
+p.lda2<-predict(lda2,newdata=orings[144,])
+p.lda1
+p.lda2
+
+```
+
+
+## Recall: logistic model and prediction
+
+We use the model where the only predictor is `temperature` since this had smaller AIC value. 
+
+```{r}
+
+logitmodel <- glm(Field~Temp,data=orings,family=binomial)
+#summary(logitmodel)
+p.logit<-predict(logitmodel,newdata=orings[144,],type="response")
+p.lda1$posterior[2]
+p.lda2$posterior[2]
+p.logit
+```
+
+
+## QDA
+
+```{r}
+qda1 <- qda(Field~Temp+Pres,data=orings)
+p.qda1<-predict(qda1,newdata=orings[144,],type="response")
+qda2 <- qda(Field~Temp,data=orings)
+#qda2
+p.qda2<-predict(qda2,newdata=orings[144,],type="response")
+
+p.qda1$posterior[2]
+p.qda2$posterior[2]
+```
+
+It clearly seems QDA does quite a good job here.
+
+## Visualization
+
+```{r}
+#install.package("klaR")
+library("klaR")
+partimat(as.factor(Field)~Temp+Pres, data = orings[1:138,], method = "lda")
+partimat(as.factor(Field)~Temp+Pres, data = orings[1:138,], method = "qda")
+
+```
+
+
+# Quality of fit
+
+## Confusion matrix
+```{r}
+Pred.logit <- predict(logitmodel,newdata=orings,type="response")
+t1.logit<-table(Pred.logit[1:138]>0.5,orings$Field[1:138])
+t2.logit<-table(Pred.logit[1:138]>0.25,orings$Field[1:138])
+t3.logit<-table(Pred.logit[1:138]>0.1,orings$Field[1:138])
+
+
+Pred.lda1 <- predict(lda1,newdata=orings)
+t1.lda1<-table(Pred.lda1$posterior[1:138,2]>0.5,orings$Field[1:138])
+t2.lda1<-table(Pred.lda1$posterior[1:138,2]>0.25,orings$Field[1:138])
+t3.lda1<-table(Pred.lda1$posterior[1:138,2]>0.1,orings$Field[1:138])
+
+
+Pred.lda2 <- predict(qda1,newdata=orings)
+t1.lda2<-table(Pred.lda2$posterior[1:138,2]>0.5,orings$Field[1:138])
+t2.lda2<-table(Pred.lda2$posterior[1:138,2]>0.25,orings$Field[1:138])
+t3.lda2<-table(Pred.lda2$posterior[1:138,2]>0.1,orings$Field[1:138])
+
+### Threshold at 0.5
+
+t1.logit
+t1.lda1
+t1.lda2
+
+### Threshold at 0.25
+t2.logit
+t2.lda1
+t2.lda2
+
+### Threshold at 0.1
+t3.logit
+t3.lda1
+t3.lda2
+```
+
+## Accuracy, Specifity, Sensitivity
+
+```{r}
+#logit
+Spec_0.5<- 128/128
+Sens_0.5<- 0/10
+Acc_0.5<- 128/138
+Spec_0.5
+Sens_0.5
+Acc_0.5
+```
+
+## ROC: receiver operating characteristic curve
+
+We do this for all three models.
+
+```{r}
+#install.packages("ROCR")
+library(ROCR)
+
+ROCRpred.logit <- prediction(Pred.logit[1:138],orings$Field[1:138])
+ROCRperf.logit <- performance(ROCRpred.logit,x.measure="fpr",measure="tpr")
+#plot(ROCRperf.logit)
+plot(ROCRperf.logit, colorize=T,print.cutoffs.at=c(0,0.1,0.2,0.3,0.5,1), text.adj=c(-0.2,1.7))
+as.numeric(performance(ROCRpred.logit,measure="auc")@y.values)
+
+ROCRpred.lda1 <- prediction(Pred.lda1$posterior[1:138,2],orings$Field[1:138])
+ROCRperf.lda1 <- performance(ROCRpred.lda1,x.measure="fpr",measure="tpr")
+#plot(ROCRperf)
+plot(ROCRperf.lda1, colorize=T,print.cutoffs.at=c(0,0.1,0.2,0.3,0.5,1), text.adj=c(-0.2,1.7))
+as.numeric(performance(ROCRpred.lda1,measure="auc")@y.values)
+
+
+ROCRpred.lda2 <- prediction(Pred.lda2$posterior[1:138,2],orings$Field[1:138])
+ROCRperf.lda2 <- performance(ROCRpred.lda2,x.measure="fpr",measure="tpr")
+#plot(ROCRperf)
+plot(ROCRperf.lda2, colorize=T,print.cutoffs.at=c(0,0.1,0.2,0.3,0.5,1), text.adj=c(-0.2,1.7))
+as.numeric(performance(ROCRpred.lda2,measure="auc")@y.values)
+```
+
+
+# Probit regression
+
+Finally we fit one more model to try out. This is Probit regression where instead of the logit link function we use the normal distribution, which is often called  regression with *probit* link.
+$$\mathbb{P}(Y=1) = \Phi(\boldsymbol{\beta}^{\top}\mathbf{x}|\mathbf{x}=\mathbf{x}).$$
+
+```{r}
+probitmodel <- glm(Field~Temp,data=orings,family=binomial(link="probit"))
+#summary(logitmodel)
+p.probit<-predict(probitmodel,newdata=orings[144,],type="response")
+p.probit
+```
+
+The prediction for the event is lower than the other models, yet a reasonably high value. We create confusion matrix to check the model performance. Again it seems similar to the other models developed.
+
+```{r}
+Pred.probit <- predict(probitmodel,newdata=orings,type="response")
+t1.probit<-table(Pred.probit[1:138]>0.5,orings$Field[1:138])
+t2.probit<-table(Pred.probit[1:138]>0.25,orings$Field[1:138])
+t3.probit<-table(Pred.probit[1:138]>0.1,orings$Field[1:138])
+
+t1.probit
+t2.probit
+t3.probit
+```

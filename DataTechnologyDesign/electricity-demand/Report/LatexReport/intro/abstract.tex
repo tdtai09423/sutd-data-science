@@ -1,0 +1,9 @@
+\prefacesection{Abstract}
+
+Accurate short-term electricity demand forecasting is essential for reliable grid operation, especially in a compact, tropical city-state like Singapore where cooling loads dominate year-round and demand is tightly coupled to weather. Yet systematic studies comparing the predictive contribution of weather variables to daily national-level demand remain scarce for this context.
+
+We present a machine learning pipeline for daily electricity demand forecasting in Singapore using data from February 2023 to December 2025. We construct 16 features covering temperature, humidity, a Comfort Climate Index (CCI), calendar indicators (day of week, month, season, public holidays, weekends), and historical demand statistics (lag and rolling features). Eight model configurations are trained under a chronological 80/20 split: a Lag-1 baseline, Linear Regression, Random Forest, XGBoost, and CatBoost with default settings, plus PPSO-tuned variants of each tree-based model---all given an identical Phasor Particle Swarm Optimisation (PPSO) budget to ensure a fair comparison. We evaluate using MAE, RMSE, $R^2$, MAPE, RAE, and the Willmott Index (WI), and deploy the best model through an interactive web portal (FastAPI + React) for historical analysis and weather-driven demand outlooks.
+
+CatBoost-PPSO achieves the best results across all metrics: $R^2 = 0.914$, MAE of 1{,}496.2 MWh, and RMSE of 1{,}895.5 MWh. Under the same tuning budget, PPSO also improves XGBoost but not Random Forest, confirming that the benefit of meta-heuristic tuning is model-dependent. These findings show that automated hyperparameter optimisation via PPSO delivers meaningful gains for gradient-boosted tree models, and that weather-derived features---particularly temperature and its interaction with humidity---are significant predictors of electricity demand in Singapore's tropical setting.
+
+\afterpreface

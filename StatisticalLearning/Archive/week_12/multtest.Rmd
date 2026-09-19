@@ -1,0 +1,400 @@
+---
+title: "Multiple testing"
+author: "Bikramjit Das"
+date: "2025"
+output: 
+ html_document: 
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    highlight: tango
+geometry: margin=1in
+fontsize: 12pt
+linkcolor: blue    
+---
+
+First, we prepare the working environment.
+```{r}
+rm(list=ls())   # Clear the environment
+# setwd("...")  # Setup the working directory
+```
+
+
+
+
+
+
+## Review of Hypothesis Tests
+
+### One-sample $t$-test
+We begin by performing some one-sample $t$-tests using the `t.test()` function. 
+
+* First we create 100 variables, each consisting of 10 observations. 
+
+* The first 50 variables have mean $\mu_j=0.5, i=j,\ldots, 50$ and variance 1, while the others have mean $\mu_j=0, j=51, \ldots, 100$ and variance  1.
+
+
+```{r}
+set.seed(6)
+x <- matrix(rnorm(10 * 100), 10, 100)
+x[, 1:50] <- x[, 1:50] + 0.5
+```
+
+* The `t.test()` function can perform a one-sample or a two-sample $t$-test.
+By default, a one-sample test is performed.
+
+* To begin, we test $\textbf{H}_0 : \mu_1 = 0.$
+
+
+```{r}
+t.test(x[, 1], mu = 0)
+```
+
+
+* The *p-value* comes out to 0.067, which is not quite low enough to reject
+the null hypothesis at level $\alpha = 0.05$. 
+
+* In this case, $\mu_1=0.5$, so the null hypothesis is false. Therefore, we have made a Type II error by failing to
+reject the null hypothesis when the null hypothesis is false.
+
+### Multiple $t$-tests
+
+* We now test $\textbf{H}_{0j} : \mu_j = 0.$ for $j = 1, . . . , 100$. 
+
+* We compute the 100 *p-values*, and then construct a vector recording whether the $j$-th *p-value* is less than or equal to 0.05, in which case we reject $\textbf{H}_{0j}$ , or greater than 0.05, in which case we do not reject $\textbf{H}_{0j}$ , for $j = 1, . . . , 100$. 
+
+* Then we create a table to check the correctness of our tests.
+
+```{r}
+p.values <- rep(0, 100)
+for (i in 1:100)
+  p.values[i] <- t.test(x[, i], mu = 0)$p.value
+decision <- rep("Do not reject H0", 100)
+decision[p.values <= .05] <- "Reject H0"
+## Table
+table(decision, c(rep("H0 is False", 50), rep("H0 is True", 50)))
+```
+* Therefore, at level $\alpha=0.05$, we reject just 10 of the 50 false null hypotheses, and we incorrectly reject 3 of the true null hypotheses. 
+
+* Using the notation from class, we have $W = 40, U = 47, S = 10, V = 3$. 
+We have set $\alpha=0.05$, which means that we expect to reject around 5% of
+the true null hypotheses. This is in line with the 2 × 2 table above, which
+indicates that we rejected $V = 3$ of the 50 true null hypotheses.
+
+* In the simulation above, for the false null hypotheses, the ratio of the
+mean to the standard deviation was only 0.5/1 = 0.5. This amounts to
+quite a weak signal, and it resulted in a high number of Type II errors. If
+we instead simulate data with a stronger signal, so that the ratio of the
+mean to the standard deviation for the false null hypotheses equals 1, then
+we make only 9 Type II errors as seen below.
+```{r}
+x <- matrix(rnorm(10 * 100), 10, 100)
+x[, 1:50] <- x[, 1:50] + 1
+for (i in 1:100)
+  p.values[i] <- t.test(x[, i], mu = 0)$p.value
+decision <- rep("Do not reject H0", 100)
+decision[p.values <= .05] <- "Reject H0"
+table(decision,
+      c(rep("H0 is False", 50), rep("H0 is True", 50))
+)
+```
+
+
+
+## The Family-Wise Error Rate
+
+Now we test for $m$ independent hypotheses and check the family-wise  rate  (FWER)
+for different levels $\alpha=0.001, 0.01, 0.05$ as $m$ increases from 1 to 500.
+```{r}
+m <- 1:500
+fwe1 <- 1 - (1 - 0.05)^m
+fwe2 <- 1 - (1 - 0.01)^m
+fwe3 <- 1 - (1 - 0.001)^m
+### Plotting
+par(mfrow = c(1, 1))
+plot(m, fwe1, type = "l", log = "x", ylim = c(0, 1), col = 2,
+     ylab = "Family - Wise Error Rate",
+     xlab = "Number of Hypotheses")
+lines(m, fwe2, col = 4)
+lines(m, fwe3, col = 3)
+abline(h = 0.05, lty = 2)
+
+```
+
+* Even for moderate values of $m$ such as 50, the FWER exceeds 0.05 unless $\alpha$ is set to a very low value, such as 0.001. 
+
+* The problem with setting $\alpha$ to such a low value is that we are likely to make a number of Type II errors.
+
+### Fund manager dataset
+
+We now conduct a one-sample $t$-test for each of the first five managers
+in the `fund.mini` dataset, in order to test the null hypothesis that the $j$-th fund manager’s mean return equals zero, $\textbf{H}_{0j} : \mu_j = 0.$
+```{r}
+library(ISLR2)
+fund.mini <- Fund[, 1:5]
+t.test(fund.mini[, 1], mu = 0)
+fund.pvalue <- rep(0, 5)
+for (i in 1:5)
+  fund.pvalue[i] <- t.test(fund.mini[, i], mu = 0)$p.value
+fund.pvalue
+```
+
+* The *p-values* are low for Managers One and Three, and high for the other
+three managers. However, we cannot simply reject $\textbf{H}_{01}$ and $\textbf{H}_{03}$, since this would fail to account for the multiple testing that we have performed.
+ 
+* Instead, we will conduct Bonferroni’s method and Holm’s method to control
+the FWER.
+
+
+* To do this, we use the `p.adjust()` function. Given the *p-values*, the function outputs *adjusted  p-values*, which can be thought of as a new set of  *p-values* that have been corrected for multiple testing. If the adjusted *p-value*  for a given hypothesis is less than or equal to $\alpha$, then that hypothesis can be rejected while maintaining a FWER of no more than $\alpha$. In other
+words, the adjusted *p-values* resulting from the `p.adjust()` function can
+simply be compared to the desired FWER in order to determine whether
+or not to reject each hypothesis.
+
+* For example, in the case of Bonferroni’s method, the raw *p-values* are
+multiplied by the total number of hypotheses, $m$, in order to obtain the
+adjusted *p-values*. (However, adjusted *p-values* are not allowed to exceed 1.)
+
+
+```{r}
+p.adjust(fund.pvalue, method = "bonferroni")
+pmin(fund.pvalue * 5, 1)
+```
+
+* Therefore, using Bonferroni’s method, we are able to reject the null hypothesis only for Manager One while controlling the FWER at 0.05.
+
+* By contrast, using Holm’s method, the adjusted p-values indicate that
+we can reject the null hypotheses for Managers One and Three at a FWER
+of 0.05.
+
+```{r}
+p.adjust(fund.pvalue, method = "holm")
+```
+
+#### Pair-wise comparison
+
+Notice that Manager One seems to perform particularly well,
+whereas Manager Two has poor performance. 
+```{r}
+apply(fund.mini, 2, mean)
+#apply(fund.mini, 2, hist)
+```
+
+Is there evidence of a meaningful difference in performance between these two managers? 
+
+* Performing a paired  $t$-test  using the `t.test()` function results in a *p-value*  of 0.038, suggesting a statistically significant difference.
+```{r}
+t.test(fund.mini[, 1], fund.mini[, 2], paired = T)
+```
+
+
+Pairwise comparison test using Tukey's method can be conducted which we skip here.
+
+
+
+## The False Discovery Rate
+
+Now we perform hypothesis tests for all 2,000 fund managers in the `fund`
+dataset. We perform a one-sample  $t$-test  of $\textbf{H}_{0j}: \mu_j = 0$, which states that the $j$-th fund manager’s mean return is zero.
+
+```{r}
+fund.pvalues <- rep(0, 2000)
+for (i in 1:2000)
+  fund.pvalues[i] <- t.test(Fund[, i], mu = 0)$p.value
+```
+
+* There are far too many managers to consider trying to control the FWER.
+Instead, we focus on controlling the FDR: that is, the expected fraction of
+rejected null hypotheses that are actually false positives. 
+
+* The `p.adjust()` function can be used to carry out the Benjamini-Hochberg procedure.
+
+```{r}
+q.values.BH <- p.adjust(fund.pvalues, method = "BH")
+q.values.BH[1:10]
+```
+
+* The *q-values* output by the Benjamini-Hochberg procedure can be interpreted as the smallest FDR threshold at which we would reject a particular null hypothesis. 
+
+* For instance, a *q-value* of 0.1 indicates that we can reject
+the corresponding null hypothesis at an FDR of 10% or greater, but that
+we cannot reject the null hypothesis at an FDR below 10%.
+
+* If we control the FDR at 10%, then for how many of the fund managers
+can we reject $\textbf{H}_{0j}: \mu_j = 0$?
+
+```{r}
+sum(q.values.BH <= 0.3)
+```
+
+* We find that 146 of the 2,000 fund managers have a *q-value* below 0.1;
+therefore, we are able to conclude that 146 of the fund managers beat the
+market at an FDR of 10%. Only about 15 (10% of 146) of these fund
+managers are likely to be false discoveries. 
+
+* By contrast, if we had instead
+used Bonferroni’s method to control the FWER at level $\alpha = 0.1$, then we would have failed to reject any null hypotheses!
+```{r}
+sum(fund.pvalues <= (0.1 / 2000))
+```
+
+
+* Recall that the Benjamini-Hochberg procedure searches
+for the largest *p-value*  such that $p(j) < qj/m$, and rejects all hypotheses
+for which the *p-value*  is less than or equal to $p(j)$. 
+
+* In the code below, we implement the Benjamini-Hochberg procedure ourselves, in order to illustrate how it works. 
+
+```{r}
+ps <- sort(fund.pvalues)
+m <- length(fund.pvalues)
+q <- 0.1
+wh.ps <- which(ps < q * (1:m) / m)
+if (length(wh.ps) >0) {
+  wh <- 1:max(wh.ps)
+} else {
+  wh <- numeric(0)
+}
+```
+
+* We plot the ordered *p-values* against their indices for $\alpha=0.1.$ The green line is the FWER control and the orange line the FDR control.
+```{r}
+plot(ps, log = "xy", ylim = c(4e-6, 1), ylab = "p-value",
+     xlab = "Index", main = "")
+points(wh, ps[wh], col = 4)
+abline(a = 0, b = (q / m), col = 2, untf = TRUE)
+abline(h = 0.1 / 2000, col = 3)
+```
+
+
+## A Re-Sampling Approach
+
+Here, we implement the re-sampling approach to hypothesis testing using
+the `Khan` dataset. 
+
+* First, we merge the training and testing data, which results in observations on 83 patients for 2,308 genes.
+
+```{r}
+attach(Khan)
+x <- rbind(xtrain, xtest)
+y <- c(as.numeric(ytrain), as.numeric(ytest))
+dim(x)
+table(y)
+```
+
+* There are four classes of cancer. For each gene, we compare the mean expression in the second class (rhabdomyosarcoma) to the mean expression in
+the fourth class (Burkitt’s lymphoma). 
+
+* Performing a standard two-sample $t$-test on the 11th gene produces a test-statistic of −2.09 and an associated *p-value*  of 0.0412, suggesting modest evidence of a difference in mean expression levels between the two cancer types.
+```{r}
+x <- as.matrix(x)
+x1 <- x[which(y == 2), ]
+x2 <- x[which(y == 4), ]
+n1 <- nrow(x1)
+n2 <- nrow(x2)
+t.out <- t.test(x1[, 11], x2[, 11], var.equal = TRUE)
+TT <- t.out$statistic
+TT
+t.out$p.value
+```
+
+* However, this *p-value*  relies on the assumption that under the null hypothesis of no difference between the two groups, the test statistic follows a $t$-distribution with 29 + 25 − 2 = 52 degrees of freedom. 
+
+* Instead of using this theoretical null distribution, we can randomly split the 54 patients into two groups of 29 and 25, and compute a new test statistic. Under the null hypothesis of no difference between the groups, this new test statistic should have the same distribution as our original one. 
+
+* Repeating this process 10,000 times allows us to approximate the null distribution of the test statistic. We compute the fraction of the time that our observed test statistic exceeds the test statistics obtained via re-sampling.
+```{r}
+set.seed(1)
+B <- 10000
+Tbs <- rep(NA, B)
+for (b in 1:B) {
+  dat <- sample(c(x1[, 11], x2[, 11]))
+  Tbs[b] <- t.test(dat[1:n1], dat[(n1 + 1):(n1 + n2)],
+                   var.equal = TRUE
+  )$statistic
+}
+mean((abs(Tbs) >= abs(TT)))
+```
+* This fraction, 0.0416, is our re-sampling-based $p$-value. It is almost identical
+to the *p-value*  of 0.0412 obtained using the theoretical null distribution.
+
+* We can plot a histogram of the re-sampling-based test statistics.
+
+```{r}
+hist(Tbs, breaks = 100, xlim = c(-4.2, 4.2), main = "",
+     xlab = "Null Distribution of Test Statistic", col = 7)
+lines(seq(-4.2, 4.2, len = 1000),
+      dt(seq(-4.2, 4.2, len = 1000),
+         df = (n1 + n2 - 2)
+      ) * 1000, col = 2, lwd = 3)
+abline(v = TT, col = 4, lwd = 2)
+text(TT + 0.5, 350, paste("T = ", round(TT, 4), sep = ""),
+     col = 4)
+```
+
+* The re-sampling-based null distribution is almost identical to the theoretical
+null distribution, which is displayed in red.
+
+* Finally, we implement the plug-in re-sampling FDR approach.
+
+* Calculating
+the FDR for all 2,308 genes in the Khan dataset may take a while. Hence,
+we will illustrate the approach on a random subset of 100 genes. For each
+gene, we first compute the observed test statistic, and then produce 10,000
+re-sampled test statistics. This may take a few minutes to run.
+
+
+```{r}
+m <- 100
+set.seed(1)
+index <- sample(ncol(x1), m)
+Ts <- rep(NA, m)
+Ts.star <- matrix(NA, ncol = m, nrow = B)
+for (j in 1:m) {
+  k <- index[j]
+  Ts[j] <- t.test(x1[, k], x2[, k],
+                  var.equal = TRUE
+  )$statistic
+  for (b in 1:B) {
+    dat <- sample(c(x1[, k], x2[, k]))
+    Ts.star[b, j] <- t.test(dat[1:n1],
+                            dat[(n1 + 1):(n1 + n2)], var.equal = TRUE
+    )$statistic
+  }
+}
+```
+* Next, we compute the number of rejected null hypotheses R, the estimated
+number of false positives $\widehat{V}$, and the estimated FDR, for a range of threshold
+values $c$. The threshold values are chosen using the
+absolute values of the test statistics from the 100 genes.
+```{r}
+cs <- sort(abs(Ts))
+FDRs <- Rs <- Vs <- rep(NA, m)
+for (j in 1:m) {
+  R <- sum(abs(Ts) >= cs[j])
+  V <- sum(abs(Ts.star) >= cs[j]) / B
+  Rs[j] <- R
+  Vs[j] <- V
+  FDRs[j] <- V / R
+}
+```
+* Now, for any given FDR, we can find the genes that will be rejected. For
+example, with the FDR controlled at 0.1, we reject 15 of the 100 null
+hypotheses. 
+
+* On average, we would expect about one or two of these genes
+(i.e. 10% of 15) to be false discoveries. 
+
+* At an FDR of 0.2, we can reject the null hypothesis for 28 genes, of which we expect around six to be
+false discoveries. 
+
+* The variable index is needed here since we restricted our
+analysis to just 100 randomly selected genes.
+```{r}
+max(Rs[FDRs <= .1])
+sort(index[abs(Ts) >= min(cs[FDRs < .1])])
+max(Rs[FDRs <= .2])
+sort(index[abs(Ts) >= min(cs[FDRs < .2])])
+```
+
+*This material is adapted from the Lab tutorial in **An Introduction to Statistical Learning with Applications in R, Second edition, Chapter 13**.*

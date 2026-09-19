@@ -1,0 +1,217 @@
+---
+title: "Framingham Heart Study Notebook"
+author: "Bikramjit Das"
+date: "Fall 2025"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+    toc: yes
+    toc_depth: 2
+    number_sections: yes
+---
+
+# Introduction
+
+The data is obtained from the *Framingham Heart Study*.
+The data set consists of 11627 observations on 39 variables which include **risk factors** used to predict 10-year risk of CHD such as *Blood Pressure, total cholesterol, LDL cholesterol, etc*. The cohort used is primarily a white middle aged population.
+
+**Data Source:** <http://biolincc.nhlbi.nih.gov/home/>  
+
+**Features of the data:**
+ * Anonymized data  
+ * 4434 participants  
+ * Three examination periods (6 years apart) from 1956-1968.  
+ * Participants followed for 24 years.  
+
+## Data pre-processing
+We need to preprocess the data before building the model. Let us first investigate the variables in the dataframe.
+
+```{r}
+#install.packages("caTools")
+framing <- read.csv("framingham.csv")
+str(framing)
+head(framing)
+```
+We start by identifying the subset of the dataframe where each individual has only one observation corresponding to `PERIOD = 1` and is free of `CHD` at the time `PREVCHD = 0`. 
+```{r}
+framing1 <- subset(framing,PERIOD==1&PREVCHD==0)
+str(framing1)
+length(unique(framing1$RANDID))
+```
+
+
+The new dataframe consists of 4240 observations of 39 variables.
+
+To model the event data, we need to identify patients if they had CHD in 10 years from their first visit. We do so by converting time for CHD to years (roughly) and check if CHD occurs in 10 years. The maximum range of the data in years is 24 in this dataset.
+```{r}
+framing1$TENCHD <- as.integer((framing1$TIMECHD/365)<=10)
+table(framing1$TENCHD)
+```
+We work with some of the more relevant variables in this data set for our purposes of prediction.
+```{r}
+colnames(framing1)
+which(colnames(framing1) == "PERIOD")
+framing1 <- framing1[,c(1:21,40)]
+str(framing1)
+sum(is.na(framing1))
+```
+The variables in the new data frame include   
+ * RANDID (identification number),  
+ * SEX (1=M,2=F),   
+ * TOTCHOL (total cholesterol in mg/dL),  
+ * AGE (age at the exam in years),  
+ *  SYSBP (systolic blood pressure),  
+ *  DIABP (diastolic blood pressure),  
+ *  CURSMOKE (current smoking 0=N,1=Y),  
+ *  CIGPDAY (cigarettes per day),  
+ *  BMI (body mass index),  
+ *  DIABETES (0=Not diabetic,1=Diabetic),  
+ *  BPMEDS (use of antihypertensive medication 1=YES,0=NO),  
+ *  HEARTRTE (heart rate in beats/min),  
+ *  GLUCOSE (glucose in mg/dL),  
+ *  educ (1=0-11 years, 2=High school, 3=Some college or vocational, 4=College or more),  
+ *  PREVCHD(0=free of disease,1=prevalent disease), PREVAP (prevalent agina pectoris: 1=YES,0=NO),  
+ *  PREVMI (prevalent myocardial infarction: 1=YES,0=NO),  
+ *  PREVSTRK (prevalent stroke 1=YES,0=NO),  
+ *  TIME (number of days since examination - all 0 here as it is the first exam date),  
+ *  PERIOD (Time period).  
+ 
+
+## Create training and test sets
+
+Split the dataset into a training and a test set. We will use the training set to build the model and the test set to simply check how the model does. We do so by preserving the ratios of the outcome variable in the two sets which can be done here. The `caTools` package can help to do so with the `sample.split` function. We set a seed to make the results replicable across different computers. Note that the split maintains the balance of people with *CHD* and *without CHD* in both the training and test sets.
+
+```{r}
+#install.packages("caTools")
+library(caTools)
+?sample.split
+set.seed(1)
+split <- sample.split(framing1$TENCHD,SplitRatio=0.65)
+#split
+training <- subset(framing1,split==TRUE)
+test <- subset(framing1,split==FALSE)
+#test
+mean(training$TENCHD)
+mean(test$TENCHD)
+```
+
+# Fitting a logistic regression model
+
+Develop a logistic regression model. The use of `~.` lets us use all the variables (other than `TENCHD`) in making a prediction.
+We use family binomial since it's either true or false, and we have limited sample size. N * bernoulli = binomial [SAMPLE]
+We don't use poisson since it assumes infinite sample size [POPULATION]
+GLM fits the model $\frac{1}{1+e^{-\textbf{X}\beta}}$ where $\textbf{X}\beta = \beta_0+\beta_1x_1+...\beta_nx_n$
+
+## Model 1: with all variables
+```{r}
+model1 <- glm(TENCHD~.,data=training,family="binomial")
+summary(model1)
+```
+
+
+
+## Model 2: relevant variables
+
+The results in `Model 1` indicates that variables such as `RANDID` do not play a role. This is to be expected. `educ` is also not significant which seems reasonable though there might be a counter argument that if a person has more education, they give greater importance to health. We will leave the variable in and rebuild the model. 
+
+```{r}
+model2 <- glm(TENCHD~SEX+TOTCHOL+AGE+SYSBP+DIABP+CIGPDAY+CURSMOKE+BMI+DIABETES+BPMEDS+HEARTRTE+GLUCOSE+educ+PREVSTRK+PREVHYP,data=training,family="binomial")
+summary(model2)
+```
+
+## Model 3: variables significant at level=0.01
+
+The results indicate that the variables significant at the 0.01 level are the `SEX, AGE, SYSBP, CIGPDAY, GLUCOSE` (and the `intercept`). Suppose we use only these variables and refit the model.
+
+```{r}
+model3 <- glm(TENCHD~SEX+AGE+SYSBP+CIGPDAY+GLUCOSE,data=training,family="binomial")
+summary(model3)
+```
+
+All the variables are significant in this new `Model 3`. While the AIC is higher in comparison to `Model 2`;  `Model 3` is easier to interpret since it has fewer variables. We stick to `Model 3` for the rest of our analysis.  
+
+## Computing Ten-year risk of CHD
+Suppose we h]ave a male who is 60 years old with a systolic blood pressure of 145, smokes two cigarettes per day with a glucose level of 80. For this patient, we can predict the probability of getting a 10-year `CHD` as roughly 0.279.
+
+```{r}
+model3$coefficients
+x<-t(model3$coefficients)%*%c(1,1,60,145,2,80)
+x  ## log(odds) scale
+exp(x)/(1+exp(x))  ## probabilities
+```
+
+# Prediction 
+
+We use the function `predict` with a threshold of $t=0.5$ to start with.
+```{r}
+predict_test <- predict(model3,newdata=test,type="response")
+CM<-table(predict_test > 0.5,test$TENCHD)  # check with lower values
+
+CM
+```
+
+## Confusion matrix:  $t=0.5$ 
+```{r}
+Accuracy = (CM[1,1]+CM[2,2])/sum(CM)
+
+
+BaseAccuracy =  (sum(CM[1:2,1]))/sum(CM)
+
+
+Specificity = (CM[1,1])/sum(CM[1:2,1])
+Sensitivity = (CM[2,2])/sum(CM[1:2,2])
+
+Accuracy
+BaseAccuracy
+Sensitivity
+Specificity
+```
+
+The accuracy in the test set is 0.8526. We can compare this to a baseline model which predicts no one has `CHD`. The accuracy of the baseline model is 0.8436. Note that we have fewer observations in the test set than the full set on which we make predictions as there are some missing entries in the dataframe.
+
+## Confusion matrix: $t=0.25$
+
+```{r}
+table(training$TENCHD)
+CM<-table(predict_test > 0.25,test$TENCHD)  # check with other values
+
+CM
+
+Accuracy = (CM[1,1]+CM[2,2])/sum(CM)
+Accuracy
+
+BaseAccuracy =  (sum(CM[1:2,1]))/sum(CM)
+BaseAccuracy
+
+Specificity = (CM[1,1])/sum(CM[1:2,1])
+Sensitivity = (CM[2,2])/sum(CM[1:2,2])
+
+Sensitivity
+Specificity
+
+```
+
+
+Using a threshold of 0.5, the model beats the baseline model by a small amount. Suppose we use a lower threshold of 0.25. We are prone to more false positives as we will be predicting more people to have CHD but this might be reasonable for this application as compared to obtaining more false negatives. While more resources might be spent on unnecessary patients, the cost of death versus preventive decisions is a trade-off to be made here. The effects of false negatives are much more than false positive here. If clinicians used this model, then 222 (135+87) patients would be suggested some treatment, of which 135 would be unnecessary. Accuracy might not always be the most important measure in certain applications as this example illustrates.
+
+# Plots
+
+## ROC Curve
+```{r}
+library(ROCR)
+pr3<-complete.cases(cbind(predict_test,test$TENCHD))
+predict3 <- prediction(predict_test[pr3],test$TENCHD[pr3])
+perf3 <- performance(predict3,x.measure="fpr",measure="tpr")
+plot(perf3)
+plot(perf3,colorize=T,print.cutoffs.at=c(0,0.1,0.2,0.3,0.5,1),text.adj=c(-.02,1.7))
+```
+
+## AUC  
+```{r}
+as.numeric(performance(predict3,measure="auc")@y.values)
+summary(model3)
+```
+
+
+The result indicates that the model can distinguish between low and high risk patients better than random guessing.

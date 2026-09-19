@@ -1,0 +1,275 @@
+---
+title: "Linear regression: testing and diagnostics"
+author: "Bikramjit Das"
+date: "2025"
+output: 
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: vignette
+    toc: yes
+    toc_depth: 2
+    number_sections: yes
+---
+
+We will attach install/load packages as and when needed.
+
+# Auto dataset
+
+## Simple linear regression
+
+This data set is available in the `StatLib` library maintained at Carnegie Mellon University. The data set has the following fields:
+
+* `mpg`: miles per gallon
+* `cylinders`: number of cylinders
+* `displacement`: engine displacement (cu. inches)
+* `horsepower`: engine horsepower
+* `acceleration`: time to accelerate from 0 to 60 mph (sec.)
+* `year`: model year (modulo 100)
+* `origin`: origin of car (1. American, 2. European, 3. Japanese)
+* `name`: vehicle name
+
+We want to find a relationship between `mpg` (response) and the other variables `horsepower`. First we read the data.
+
+```{r}
+auto<-read.csv("Auto.csv")
+str(auto)
+```
+Observe that the variable `horsepower` is a *character* variable, so we convert it to *numeric*.
+
+```{r}
+auto$horsepower <- as.numeric(as.character(auto$horsepower))
+```
+
+Now fit a simple linear regression model between `mpg` and `horsepower`.
+
+```{r}
+model1<- lm(mpg~horsepower, data=auto)
+summary(model1)
+```
+
+
+* There seems to be a strong relationship between the predictor and response. 
+
+* The p-value is almost zero, implying we can reject the null hypothesis that the corresponding $\beta_1= 0$.
+
+* Since $\widehat{\beta}_1=-0.1578$, there is a negative linear relationship between mpg and horsepower.   
+
+
+Now, let's do some prediction. What is the predicted `mpg` associated with a `horsepower` of 98? 
+
+   
+```{r}
+predict.lm(model1,newdata=data.frame(horsepower=98))
+
+```
+
+What is the associated 95% **confidence interval**?
+
+   
+```{r}
+p1<-predict.lm(model1,newdata=data.frame(horsepower=98),interval=c("confidence"),level=.95)
+p1
+```
+
+What is the associated 95% **prediction interval**?
+
+   
+```{r}
+p2<-predict.lm(model1,newdata=data.frame(horsepower=98),interval=c("prediction"),level=.95)
+p2
+```
+
+* The predicted `mpg` for `horsepower` of 98 is `r round(p1[,1],3)`.
+
+* 95% confidence interval is [`r round(p1[,2],3)`, `r round(p1[,3],3)`].
+
+
+* 95% prediction interval is [`r round(p2[,2],3)`, `r round(p2[,3],3)`].
+   
+   
+Next we find correlation between the response and the predictor variable.
+
+We use `cor(auto$mpg,auto$horsepower, use = "pairwise.complete.obs")` which excludes entries whenever one of the entries is `NA`. 
+```{r}
+cor(auto$mpg,auto$horsepower, use = "pairwise.complete.obs")
+cor(auto$mpg,auto$horsepower, use = "pairwise.complete.obs")^2
+```
+
+* Here $R^2=0.6059$ which is just square of the correlation computed.  
+  
+Now let's plot the response against the predictor. 
+```{r}
+#install.packages(ggplot2)
+library(ggplot2)
+ggplot(auto,aes(horsepower,mpg))+geom_point(na.rm=T)+geom_smooth(method="lm",na.rm=T,se=F)
+# Alternative plotting
+#plot(auto$horsepower,auto$mpg)
+#abline(model1)
+```
+* We also plot the least squares regression line, it tends to indicate that there are some non-linearities. To check this we need to do a `residual plot`.
+
+* Install the package `ggfortify` which aids plotting linear models with `ggplot2`. We then do some `residual plots` and `Normal Q-Q plot` for diagnostics.
+
+
+```{r}
+#install.packages(ggfortify)
+library(ggfortify)
+autoplot(model1,label.size = 3)
+# Alternative plotting without ggplot
+#layout(matrix(1:4,2,2))
+#plot(model1)
+```
+
+* A good linear fit should have the  residuals randomly scattered. In this model we see that the residuals decrease, and then increase as the number of fitted residuals increase. 
+
+* The normal QQ plot also shows that the distribution of the residuals is not normal at the extreme tails. This indicates that the data might have evidence of some non-linearities and outliers.
+
+* Now let us add a non-linear component `horsepower`$^2$ and regress `mpg` on both `horsepower` and `horsepower`$^2$.
+
+```{r}
+auton<-auto
+auton$horse2<-auton$horsepower^2
+model2<- lm(mpg~horsepower+horse2, data=auton)
+summary(model2)
+```
+
+* The fit seems reasonable with a higher multiple-$R^2 =0.688$. Let's look at the residual plot and compare with the previous model
+
+```{r}
+par(mfrow=c(1,2))
+plot(model2,which=1,main="quadratic model")
+plot(model1,which=1, main= "linear model")
+
+
+```
+
+* Here the residual also indicate that a quadratic relationship between `mpg` and `horsepower` is more plausible.
+
+## Multiple linear regression
+
+Now we use the same data for  multiple linear regression.
+First we create a scatterplot matrix which includes all the variables in the dataset.  
+
+An easy way to do this is using `pairs(your_data_name)`. Instead we use the package `psych` and `pairs.panel`.  
+```{r}
+library(psych)
+pairs.panels(auto,ellipses = F, lm =T, breaks=10, hist.col="blue")
+```
+
+
+We can also compute a matrix of correlations between the variables using the function `cor()`. You need to exclude the `name` variable which is qualitative. Also we remove the entries where we had `NA` appearing. The code is given below.
+
+```{r}
+str(auto)
+autored<-subset(auto,select=-c(name))
+#str(autored)
+#cor(autored)
+cor(autored, use = "complete") ## presence of NA in horsepower values renders this correlation NA, so we need to add "complete"
+sum(is.na(autored))
+auto1<-subset(autored,!is.na(autored$horsepower))
+dim(autored)
+dim(auto1)
+```
+
+Now we perform a multiple linear regression with `mpg` as the response and all other variables except
+`name` as the predictors.   
+   
+```{r}
+model3 <-lm(mpg~., data=auto1)
+summary(model3)
+```
+
+* The p-value for the multiple regression model is very close to 0. Hence we can reject the null hypotheses that all the $\beta_i$'s are zero; so there seems to be a strong linear relationship between the predictors and the response.  
+
+* The variables `displacement`, `weight`, `year` and `origin` are statistically significant at a 1\% level.
+
+* For example, the coefficient for `year` is positive and the p-value is close to 0. This shows that `year` is positively related to `mpg` where every year adds 0.7508 miles per gallon, everything else staying the same. It also shows newer cars have better performance on an average.
+
+
+* In the full model we find `cylinder`, `horsepower` and `acceleration` to be not significant individually. We can test if all of them are indeed not significant (jointly). We create a new model without these variables and conduct an appropriate F-test.
+
+```{r}
+model3var<-lm(mpg~displacement+weight+year+origin, data=auto1)
+summary(model3var)
+```
+
+* Can we really say tha the other variables are not significant at all?
+
+
+```{r}
+SSE<-sum(model3$residuals^2)
+SSEnew<-sum(model3var$residuals^2)
+
+n<-dim(auto1)[1]
+p<-dim(auto1)[2]-1
+q<-3
+Fnew<-((SSEnew-SSE)/q)/(SSE/(n-p-1)) ## SSR-SSRnew = (SST-SSE)-(SST-SSEnew)= SSEnew-SSE
+
+Fnew
+
+pval<-pf(Fnew,3,384,lower.tail = F)
+pval
+
+```
+
+Since the p-value is not less than 0.05 we cannot really reject the hypothesis that all of the coefficients of `cylinder`, `horsepower` and `acceleration` are indeed 0.
+
+# Multicollinearity
+
+Here we use a simulated data set. First we generate the data using the following commands in R:  
+```{r}
+set.seed(1)
+x1 <- runif(100)
+x2 <- 0.5*x1 + rnorm(100)/10
+y <- 2 + 2*x1 + 0.3*x2 + rnorm(100)
+```
+
+* The last line corresponds to creating a linear model in which `y` is a function of `x1` and `x2`. 
+
+* The form of the linear model is:
+$$ y = \beta_0+ \beta_1 x_1 + \beta_2 x_2 +\epsilon$$
+where the coefficients are $\beta_0=2, \beta_1=2, \beta_2=0.3$.  
+
+Let us find the correlation between `x1` and `x2` first and create a scatterplot displaying the relationship between the variables. 
+```{r}
+cor(x1,x2)
+ggplot(cbind(x1,x2,y),aes(x1,x2))+geom_point()
+```
+
+* The correlation is 0.8351. This clearly shows a strong positive correlation between `x1` and `x2` (as also seen in the scatterplot). 
+
+
+Now let us fit a least square regression to predict `y` using `x1` and `x2`.  
+
+```{r}
+model4 <- lm(y~x1+x2)
+summary(model4)
+```
+
+*  From the fit we see that $\widehat{\beta}_0=2.1305, \widehat{\beta}_1=1.4396, \widehat{\beta}_2=1.0097$. Since the true values are$\beta_0=2, \beta_1=2, \beta_2=0.3$, there is a discrepancy in the values of $\beta_1, \widehat{\beta_1}$ and $\beta_2, \widehat{\beta_2}$ but less in the case of $\beta_0, \widehat{\beta_0}$.
+
+* From our regression model, we reject the null hypothesis that $\beta_1=0$ at the 5% level, but we cannot reject the null hypothesis that $\beta_2=0$ at the 5% level.
+
+* Note that the answers here may change depending on the data simulated, but most of the time we can reject one but not the other.    
+
+    
+* Now fit a least squares regression to predict `y` using only `x1`.
+
+```{r}
+model5 <- lm(y~x1)
+summary(model5)
+``` 
+
+* The estimated $\widehat{\beta_1}=1.9759$ which is close to $\beta_1=2$, and we can reject the null hypothesis at 1% level that $H_0:\beta_1=0$ as the p-value is close to zero.
+   
+* Now fit a least squares regression to predict `y` using only `x2`.
+
+```{r}
+model6 <- lm(y~x2)
+summary(model6)
+```
+
+* The estimated $\widehat{\beta_2}=2.8996$ which is quite far from $\beta_2=0.3$. We  reject the null hypothesis that $H_0:\beta_2=0$ here as the p-value is close to zero.
+
+* This is a case of  multicollinearity in the data between `x1` and `x2` (by our own construction in this case). In doing multiple regression we see this effect where it is difficult to reject $H_0:\beta_j=0$ (for one of the coefficients), while we see that with a single regression (with one variable), we can reject $H_0:\beta_j=0$. 
+

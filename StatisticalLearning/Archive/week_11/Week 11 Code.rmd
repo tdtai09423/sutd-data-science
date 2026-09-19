@@ -1,0 +1,111 @@
+---
+title: "Test your knowledge of CART and Random Forests"
+date: "Fall 2025"
+output:
+ html_document: 
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    highlight: tango
+geometry: margin=1in
+fontsize: 12pt
+linkcolor: blue    
+---
+
+# Question 1
+## a)
+
+The training and test have 253 observations each. Variables used in tree are lstat (lower status of the population), rm (average number of rooms per dwelling) and age (proportion of owner-occupied units built prior to 1940) and crim (per capita crime rate by town).
+
+```{r}
+rm(list=ls())
+boston <- read.csv("Boston.csv")
+set.seed(1)
+trainID <- sample(1:nrow(boston), nrow(boston)/2)
+train <- boston[trainID,]
+test <- boston[-trainID,]
+str(train)
+str(test)
+library(rpart)
+library(rpart.plot)
+model.tree <- rpart(medv ~ ., data = train)
+summary(model.tree)
+model.tree
+prp(model.tree)
+```
+
+## b)
+
+Test mean squared error is 35.28688.
+
+```{r}
+pred.tree <- predict(model.tree, newdata = test)
+mse <- mean((pred.tree - test$medv)^2)
+mse
+plot(pred.tree, test$medv)
+abline(1:50,1:50)
+```
+
+## c)
+
+The results shows that from cross validation, the smallest value of xerror (or even xerror+xstd) is 0.01048773, So we would possibly reduce one split. 
+
+```{r}
+printcp(model.tree)
+opt <- which.min(model.tree$cptable[,"xerror"]) 
+cp <- model.tree$cptable[opt, "CP"]            
+cp
+```
+## d)
+The test mean squared error is 35.16349 (slightly lesser than (b) but not by much).
+
+```{r}
+tree2 <- prune(model.tree,cp)
+prp(tree2)
+pred.tree2 <- predict(tree2, newdata = test)
+mse2 <- mean((pred.tree2 - test$medv)^2)
+mse2
+```
+
+
+## e)
+Test mean squared error is 19.00006 (much lesser here compared to CART). At each split, it tried 4 variables.
+```{r}
+library(randomForest)
+set.seed(1)
+model.forest <- randomForest(medv ~ ., data = train)
+model.forest
+pred.forest <- predict(model.forest, newdata = test)
+mse2 <- mean((pred.forest - test$medv)^2)
+mse2
+```
+
+## f)
+Most important variables are rm, lstat (we also identified them in CART).
+
+```{r}
+importance(model.forest)
+varImpPlot(model.forest)
+```
+
+## g)
+
+Here we try a couple of values of mtry = 6, 13. The mean squared error with the set seed is 19.47538 and 23.43774. As we see using all variables result in highly correlated trees and the prediction power is not good (as mtry increases).
+
+```{r}
+set.seed(1)
+model.forest1 <- randomForest(medv ~ ., data = train, mtry = 6)
+model.forest1
+pred.forest1 <- predict(model.forest1, newdata = test)
+mse3 <- mean((pred.forest1 - test$medv)^2)
+mse3
+
+set.seed(1)
+model.forest2 <- randomForest(medv ~ ., data = train, mtry = 13)
+model.forest2
+pred.forest2 <- predict(model.forest2, newdata = test)
+mse4 <- mean((pred.forest2 - test$medv)^2)
+mse4
+```
+
+##### End of Exercise

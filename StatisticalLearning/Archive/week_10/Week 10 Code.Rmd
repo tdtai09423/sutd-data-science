@@ -1,0 +1,98 @@
+---
+title: "Test your knowledge of Linear Regression and PCA in R"
+date: "Fall 2025"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+    toc: yes
+    toc_depth: 2
+    number_sections: yes
+---
+
+# Questions on Linear regression
+
+1. This problem involves the dataset `wine$\_$italy.csv` which was obtained from the University of Irvine Machine Learning Repository. These data are the results of a chemical analysis of wines grown in the same region in Italy but derived from three different \emph{cultivars}.  The analysis determined the quantities of 13 constituents found in each of the three types of wines. The first column identifies the cultivars and the next thirteen are the attributes given by: 
+ * `alcohol`: Alcohol
+ * `malic`: Malic acid
+ * `ash`: Ash
+ * `alkalin`: Alkalinity of ash
+ * `mag`: Magnesium
+ * `phenols`: Total phenols
+ * `flavanoids`: Flavanoids
+ * `nonflavanoids`: Nonflavanoid phenols
+ * `proanth`: Proanthocyanins
+ * `color`: Color Intensity 
+ * `hue`: Hue
+ * `od280`: OD280/ OD315 of diluted wines
+ * `proline`: Proline
+
+a. Check the relationship between the variables by creating a pair-wise scatterplot of the thirteen attributes.  
+ *Answer.*  From the scatterplot we see *flavanoids* and *total phenols* are quite positively correlated. *Falvanoinds* are also quite positively correlated with *proanthocyanins*
+```{r}
+library(factoextra)
+library(ggfortify)
+library(psych)
+
+wineitaly<-read.csv("wine_italy.csv",sep=",",head=T)
+str(wineitaly)
+wine_it<-wineitaly[,-1]
+wine_cl<-wineitaly[,1]
+
+pairs.panels(wine_it, ellipses = F, lm =T, breaks=10, hist.col="blue")
+cor(wine_it)
+```
+b. Conduct a principal component analysis on the standardized data. What proportion of the total variability  in the data is explained by the first two components?  
+
+ *Answer.*  The first two components explain 55% of the total variation.
+ 
+```{r}
+pr_wine<-prcomp(wine_it,scale=T)
+
+scale_wine_it <- scale(wine_it)
+d <- svd(scale_wine_it)$d
+d2 <- d ^ 2
+cumsum(d2) / sum(d2)
+
+summary(pr_wine) 
+pr_wine$sdev
+```
+ 
+c. Plot the data along the first two principal components and color the different cultivars separately. Also plot the loadings of the different components to show the importance of the different attributes on the first two principal components?  
+ *Answer.* 
+```{r}
+library(factoextra)
+fviz_pca_biplot(pr_wine, label = "var", habillage=wine_cl)
+fviz_pca_biplot(pr_wine, label = "var", habillage=wine_cl,addEllipses=TRUE, ellipse.level=0.95)
+```
+    i) Which two key attributes differentiate Cultivar 2 from the other two cultivars?  
+    
+ *Answer.*  From the principal component loadings for each attribute, we can see that *Cultivar 2* (green triangles) has lighter color intensity and lower alcohol content (plotted opposite to the directions of these attributes in the PC1-PC2 axes). They also have a higher OD280/OD315 ratio and stronger hue than the other cultivars (but these weights are a little less that the first two).
+ 
+```{r}
+pr_wine$rotation[order(pr_wine$rotation[,1],decreasing=T),1:2] ## order according to PC1
+# pr_wine$rotation[order(pr_wine$rotation[,2],decreasing=T),1:2] ## order according to PC2
+pr_wine$rotation[, 1] %*% pr_wine$rotation[, 2]
+``` 
+    ii) Which two key attributes differentiate Cultivar 3 from the other two cultivars?  
+    
+ *Answer.*  In this case we can see that *Cultivar 3* (blue squares) has higher content of malic acid and non-flavanoids, as well as higher alkalinity especially with respect to cultivar 1.
+ 
+ 
+d. Use an appropriate plot to find the number of attributes required to explain at least 80% of the total variation in the data. How many principal components would you pick to explain the variability in the data reasonably?
+
+*Answer.*  We use a plot of the cumulative percentage of variance explained first. From the plot (the red vertical line is at the level 0.8 and the blue horizontal line at index 5) and the calculations, we can see that the first five principal components are necessary to explain at least 80% of the variability. 
+We also make a scree plot and observe that only three of the variances are greater than 1, hence we can decide on choosing 3 principal components to reasonable explain the variablitly in the data. The fourth one is has variance 0.92 which is close to one, so we may choose to include it too.
+
+```{r}
+pr_wine$sdev^2
+pve_w<- pr_wine$sdev^2/sum(pr_wine$sdev^2)
+cpve_w<- cumsum(pve_w)
+pve_w
+cpve_w
+
+plot(cpve_w,xlab="Principal components",type="l",ylim=c(0,1))+abline(h=0.8,col="red")+abline(v=5,col="blue")
+plot(pr_wine,type="l",ylim=c(0,5),main="Scree plot")+abline(h=1,col="red") 
+```
+
+##### End of Exercise

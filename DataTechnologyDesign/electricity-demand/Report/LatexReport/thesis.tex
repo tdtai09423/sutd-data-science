@@ -1,0 +1,113 @@
+%%%%%%%%%%%% PACKAGES %%%%%%%%%%%%
+\documentclass{template}
+\usepackage{graphicx,parskip,appendix,float}
+\usepackage{tikz,pgfplots}
+\usepackage{subcaption}
+\usepackage{multirow}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc}
+\usepackage[ruled]{algorithm2e}
+\usepackage{url,amsmath,amssymb,fancybox,listings,pdfpages,caption,multicol,datetime,rotating,booktabs}
+\usepackage{csquotes}
+
+%%%%%%%%%%%% LAYOUT %%%%%%%%%%%%
+\usepackage[a4paper, margin=2.2cm]{geometry}
+\setstretch{1.15}
+\renewcommand{\thesection}{\arabic{section}}
+\renewcommand{\thetable}{\arabic{table}}
+\renewcommand{\thefigure}{\arabic{figure}}
+\renewcommand{\theequation}{\arabic{equation}}
+\usepackage{titlesec}
+\titlespacing*{\section}{0pt}{1.1em}{0.6em}
+\titlespacing*{\subsection}{0pt}{0.9em}{0.45em}
+\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
+\setlength{\intextsep}{10pt plus 2pt minus 2pt}
+\captionsetup{font=small, skip=5pt}
+
+%%%%%%%%%%%% REFERENCES %%%%%%%%%%%%
+\usepackage[style=authoryear,giveninits,uniquename=init,backend=biber]{biblatex}
+\addbibresource{thesis.bib}
+
+%%%%%%%%%%%% HYPERREF (load last) %%%%%%%%%%%%
+\usepackage[pagebackref=false,pdffitwindow=true]{hyperref}
+\hypersetup{
+    pdftitle    = {Impact of Weather Variables on Short-Term Electricity Demand Forecasting in Singapore: A Comparative Study with PPSO-Optimised Models},
+    pdfauthor   = {Amanda An, Ryaan Le, Nolen Dao, Louise Nguyen, Kain Tran, Uri Duong},
+    pdfsubject  = {Electricity Demand Forecasting, Machine Learning},
+    pdfkeywords = {electricity demand, forecasting, CatBoost, PPSO, Singapore, weather},
+    colorlinks  = true, anchorcolor = blue, filecolor = blue, urlcolor = blue,
+    linkcolor   = blue,
+    citecolor   = blue,
+}
+
+%%%%%%%%%%%% COLOURS & MISC %%%%%%%%%%%%
+\definecolor{colBackGrnd}{rgb}{1,1,0.8}
+\definecolor{colIdentifier}{rgb}{0,0,0}
+\definecolor{colComments}{rgb}{0,.5,0}
+\definecolor{colWhite}{rgb}{1,1,1}
+
+\newcommand{\MyHookSign}{\hbox{\ensuremath\hookleftarrow}}
+
+\lstset{%
+    float=H,
+    basicstyle=\ttfamily\footnotesize,
+    identifierstyle=\color{colIdentifier},
+    keywordstyle=\color{colIdentifier},
+    stringstyle=\color{colIdentifier},
+    commentstyle=\color{colIdentifier},
+    columns=flexible,
+    tabsize=2,
+    frame=single,
+    extendedchars=true,
+    showspaces=false,
+    showstringspaces=false,
+    numbers=left,
+    numberstyle=\footnotesize,
+    breaklines=true,
+    prebreak={\space\MyHookSign},
+    language=Java,
+    backgroundcolor=\color{colBackGrnd},
+    breakautoindent=true,
+    captionpos=b
+}
+
+\sloppy
+
+%%%%%%%%%% DOCUMENT %%%%%%%%%%%%
+\begin{document}
+
+\DeclareGraphicsExtensions{.jpg,.png,.gif,.pdf}
+
+\title{\huge{Impact of Weather Variables on Short-Term Electricity Demand Forecasting in Singapore: A Comparative Study with PPSO-Optimised Models}}
+\author{Amanda An \\ Ryaan Le \\ Nolen Dao \\ Louise Nguyen \\ Kain Tran \\ Uri Duong}
+\rpttype{Degree}
+\principaladviser{Dr. Young Lee}
+
+%%%%%%%%%%%% ACKNOWLEDGEMENTS (replaces Declaration page) %%%%%%%%%%%%
+\makeatletter
+\def\declpage{%
+\prefacesection{Acknowledgements}
+    We would like to thank Dr.\ Young Lee for his guidance, constructive
+    feedback throughout this project. We also thank the
+    Singapore Energy Market Authority (EMA) for making electricity demand
+    data publicly available, and the open-source communities behind
+    scikit-learn, XGBoost, CatBoost, and the Open-Meteo weather API,
+    whose tools made this work possible.
+\vfill}
+\makeatother
+
+\beforeabstract
+\afterabstract
+
+\input{paper/introduction}
+\input{paper/relatedwork}
+\input{paper/methodology}
+\input{paper/results}
+\input{paper/discussion}
+\input{paper/conclusion}
+
+\footnotesize
+\printbibliography
+\normalsize
+
+\end{document}

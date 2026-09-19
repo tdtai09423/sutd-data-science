@@ -1,0 +1,349 @@
+---
+title: "Model selection: Hitters Notebook"
+author: "Bikramjit Das"
+date: "2025"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+    toc: yes
+    toc_depth: 2
+    number_sections: yes
+---
+
+# Data set
+
+The hitters data set consists of 322 observations on 21 variables with the following information - `X` (name), `AtBat`, `Hits`, `HmRun` (home runs), `Runs`, `RBI`, `Walks`, `Years`, `CAtBat`, `CHits`, `CHmRun`, `CRuns`, `CRBI`, `CWalks`, `League`, `Division`, `PutOuts`, `Assists`, `Errors`, `Salary`, `NewLeague`. Here `League`, `Division` and `NewLeague` are factor variables with 2 categories. We drop rows with missing entries and are left with 263 observations.
+
+```{r results='hide'}
+rm(list=ls())
+hitter <- read.csv("hitters.csv")
+str(hitter)
+hitter<-na.omit(hitter)
+str(hitter)
+```
+
+# Subset selection 
+
+The `leaps` package in R does subset selection with the `regsubsets` function. 
+
+```{r}
+#install.packages("leaps")
+library(leaps)
+?regsubsets
+```
+
+## Best subset
+
+For best subset selection no `method` needs to be specified (alternatively specify `method="exhaustive"`). By default, the maximum number of subsets this function uses is 8. We extend this to do a complete subset selection by changing the default value of `nvmax` argument in this function. Note that `CRBI` is in the model with 1 to 6 variables but not in the model with 7 and 8 variables.
+
+
+```{r}
+hitters <- hitter[,2:21] # remove the name variable
+
+modelb <- regsubsets(Salary~.,hitters)  ## Best subset up to size 8
+summary(modelb)
+modelbest<-regsubsets(Salary~.,hitters,nvmax=19)
+summary(modelbest)
+
+plot(modelbest)  ### Plot with Bayesian Information Criterion  = -2LL + p log(n) ## p: number of parameters
+names(summary(modelbest))
+plot(modelbest, scale ="r2")
+plot(modelbest, scale ="adjr2")
+```
+```{r}
+#names(summary(modelbest))
+
+summary(modelbest)$rsq
+plot(summary(modelbest)$rsq)
+plot(summary(modelbest)$rss)
+plot(summary(modelbest)$adjr2)
+which.max(summary(modelbest)$adjr2)
+coef(modelbest,11)
+```
+
+
+The figures indicate that R-squared increase as the number of variables in the subset increases and likewise the residual sum of squared (sum of squared errors) decreases as the size of the subsets increases. On the other hand the adjusted R-squared increases first and then decreases.
+
+## Forward and backward stepwise selection
+
+ In this example, the best model identified by the forward step-wise selection method is the same as that obtained by the best subset selection. It is also possible to run this algorithm using a backward step-wise selection method  where we drop variables one a time rather add. In general, the solutions from these two methods may be different.
+ 
+ 
+```{r}
+modelfwd<-regsubsets(Salary~.,data=hitters,nvmax=19,method="forward")
+which.max(summary(modelfwd)$adjr2)
+coef(modelfwd,11) ###  same as model best
+summary(modelbest)$adjr2-summary(modelfwd)$adjr2
+plot(summary(modelfwd)$adjr2)
+plot(summary(modelfwd)$bic)
+
+modelbcwd<-regsubsets(Salary~.,data=hitters,nvmax=19,method="backward")
+which.max(summary(modelbcwd)$adjr2)
+coef(modelbcwd,11)
+summary(modelbcwd)
+
+coef(modelbest,11)
+coef(modelfwd,11)
+coef(modelbcwd,11)
+```
+
+
+
+# Subset selection using validation set
+
+## Using a training and a validation set
+
+* Split into training and validation set.  
+
+* `model.matrix` creates the **X**-matrix. Then we create a loop to find the coefficients for the best subset of size `i` for `i` running from 1 to 19. We use the coefficients to predict the *Y*-values and compute MSE for the *validation set*. Note that AIC, BIC, etc are not used here.
+
+
+```{r, hide ='results'}
+
+set.seed(1)
+train=sample(c(TRUE ,FALSE), nrow(hitters),rep=TRUE)   ## Training set 
+valset =(!train)       ## Validation set
+
+model_valset=regsubsets(Salary~.,data=hitters[train ,],nvmax =19)  ### best subset on training set
+summary(model_valset)
+
+valset.mat=model.matrix(Salary~.,data=hitters[valset,])  ### Creates the X-matrix
+
+valset.mat
+
+MSE.val =rep(NA ,19)
+for(i in 1:19){
+  coefi=coef(model_valset, id=i)   ## Selects coefficients of the best subset of size i
+  pred=valset.mat[,names(coefi)]%*%coefi  ## Predicts y-values
+  MSE.val[i]= mean((hitters$Salary[valset]-pred)^2) ## computes MSE for the model on validation set.
+}
+```
+
+Let us check the MSE values for the different best subsets.
+
+```{r}
+MSE.val
+
+plot(MSE.val)
+
+best<-which.min(MSE.val)
+best
+```
+
+The best model turns out to be the one with `r best` variables.  Notice that if we now look at the best subset of size `r best` on the entire data set, it is a bit different.
+
+```{r}
+coef(model_valset,best) #### Coefficients from the entire training set of hitters (without NA values)
+
+coef(modelbest,7)      #### Coefficients from the entire data set of hitters (without NA values)  # Use names(...) to get the coefficients selected
+
+```
+
+
+
+## Prediction
+
+Unfortunately `regsubsets` does not have a `prediction` method in-built. Hence we write a function for prediction.
+
+```{r}
+
+predict.regsubsets=function(object,newdata,id,...){
+  form=as.formula(object$call[[2]])   ### check what this does
+  mat=model.matrix(form,newdata)
+  coefi=coef(object,id=id)
+  xvars =names(coefi)
+  mat[,xvars]%*%coefi
+}
+
+pred<- predict.regsubsets(model_valset,hitters[valset,],id=best)
+MSE.valsetbest<- mean((hitters$Salary[valset]-pred)^2)
+
+MSE.valsetbest
+
+### Check with MSE calculated  previously
+MSE.val[best]
+```
+
+
+We will use the `predict.regsubsets` function later.
+
+
+## Subset selection with k-fold cross validation
+
+We now try to choose among the models of different sizes using cross validation.
+This approach is somewhat involved, as we must perform best
+subset selection within each of the `k` training sets. Despite this, we see that
+with its clever subsetting syntax, R makes this job quite easy. First, we
+create a vector that allocates each observation to one of `k = 10` folds, and
+we create a matrix in which we will store the results.
+
+
+
+```{r}
+k=10
+set.seed (1)
+folds=sample(1:k,nrow(hitters),replace =TRUE)
+cv.errors =matrix(NA,k,19, dimnames=list(NULL, paste(1:19)))
+folds
+cv.errors
+```
+
+
+Now we write a for loop that performs cross-validation. In the `j`-th fold, the
+elements of folds that equal `j` are in the test set, and the remainder are in
+the training set. We make our predictions for each model size (using our
+new `predict.regsubsets` function), compute the test errors on the appropriate subset,
+and store them in the appropriate slot in the matrix `cv.errors`.
+
+```{r}
+for(j in 1:k){
+ best.cv=regsubsets(Salary~.,data=hitters[folds !=j,],nvmax =19)
+ for(i in 1:19) {
+ pred=predict.regsubsets(best.cv,hitters[folds ==j,], id=i)
+ cv.errors[j,i]=mean((hitters$Salary[folds ==j]-pred)^2)
+ }
+}
+cv.errors
+```
+
+Let us plot the cross-validation errors, i.e. means of 10-fold MSEs for different sizes.
+```{r}
+mean.cv.errors =apply(cv.errors ,2, mean)
+mean.cv.errors
+#par(mfrow =c(1,1))
+plot(mean.cv.errors ,type='b')
+minb<-which.min(mean.cv.errors)
+minb
+```
+Observe that cross-validation selects a `r minb`-variable model. We now perform best subset selection on the full data set in order to obtain the `r minb`-variable model. 
+```{r}
+coef(modelbest,minb)
+```
+
+*This implementation perhaps does not actually give you the best model using cross-validation. Why?*
+
+
+# LASSO: another subset selection technique
+
+
+The generalized linear model with penalized maximum likelihood package `glmnet` in R implements the LASSO method. To run the `glmnet()` function, we need to pass in the arguments as *X* (input matrix), *y* (output vector), rather than the *y~X* format that we used thus far. The `model.matrix()` function produces a matrix corresponding to the 19 predictors and the intercept and helps transform qualitative variables into dummy quantitative variables. This is important since `glmnet()` works only with quantitative variables.
+
+
+```{r}
+#install.packages("glmnet")
+library(glmnet)
+X <- model.matrix(Salary~.,hitters)
+y <- hitters$Salary
+str(X)
+```
+
+We now choose a range for the lambda parameters and create a training and test set. We then build the LASSO model on this data. The output from the model provides the `Df` (number of non-zero coefficients), `%Dev` and `Lambda` values. The deviance measure is given as `2(loglike_sat - loglike)`, where `loglike_sat` is the log-likelihood for the saturated model (a model with a free parameter per observation). Null deviance is defined to be
+`2(loglike_sat - loglike(NULL))` where the NULL model refers to the intercept model only. The deviance ratio is `dev.ratio=1-deviance/nulldev`. As `lambda` decreases, the `dev.ratio` increases (more importance given to model fit than model complexity).
+```{r}
+?glmnet
+grid<-10^seq(10,-2, length=100)
+grid
+set.seed(1)
+train <- sample(1:nrow(X),nrow(X)/2)
+test <- (-train)
+modellasso <- glmnet(X[train,],y[train],lambda=grid)
+summary(modellasso)
+modellasso
+deviance(modellasso)
+
+plot(modellasso,xvar="lambda",label="TRUE")
+
+```
+We see from the plot that as lambda increases, many of the coefficients get close to zero. We can retrieve these coefficients as follows. Note that the number of non-zero coefficients does not change in a fully  monotonic way, as lambda increases or decreases.
+```{r}
+modellasso$df
+#modellasso$beta!=0
+#modellasso$beta
+coef.glmnet(modellasso,s=100)
+```
+
+## Prediction
+
+Predictions: We start with a prediction for the model fitted with different values of `lambda`. 
+
+
+
+```{r}
+
+?predict.glmnet
+#modellasso$lambda
+predictlasso1 <- predict(modellasso,newx=X[test,],s=100)
+mse100<-mean((predictlasso1-y[test])^2)
+
+
+predictlasso2 <- predict(modellasso,newx=X[test,],s=50)
+mse50<-mean((predictlasso2-y[test])^2)
+
+
+predictlasso3 <- predict(modellasso,newx=X[test,],s=200)
+mse200<-mean((predictlasso3-y[test])^2)
+
+mse100
+mse50
+mse200
+
+
+
+predictlasso1a <- predict(modellasso,newx=X[test,],s=100,exact=T,x=X[train,],y=y[train])
+mse100e<-mean((predictlasso1a-y[test])^2)
+predictlasso2a <- predict(modellasso,newx=X[test,],s=50,exact=T,x=X[train,],y=y[train])
+mse50e<-mean((predictlasso2a-y[test])^2)
+predictlasso3a <- predict(modellasso,newx=X[test,],s=200,exact=T,x=X[train,],y=y[train])
+mse200e<-mean((predictlasso3a-y[test])^2)
+predictlasso4 <- predict(modellasso,newx=X[test,],s=0,exact=T,x=X[train,],y=y[train])
+mse0e<-mean((predictlasso4-y[test])^2)
+predictlasso5 <- predict(modellasso,newx=X[test,],s=10^10,exact=T,x=X[train,],y=y[train])
+mse10t10e<-mean((predictlasso5-y[test])^2)
+
+
+
+mse100
+mse100e
+
+mse50
+mse50e
+
+mse200
+mse200e
+
+mse0e
+mse10t10e
+  
+  
+```
+
+The test mean squared error for this model is `r mse100`. Suppose, we change lambda to 50, we get `r mse50` and if we change lambda to 200, we get `r mse200`. Note that by default if prediction is done at lambda values that are not tried in the fitting algorithm, it uses linear interpolation to make predictions. We can use exact=T in the argument to get the exact value by refitting. In addition, we need to then pass also the original training set data to the function. We get a test error of `r mse0e` with the full model while `r mse10t10e` with a very large value of lambda. Thus choosing lambda appropriately will be important in the quality of the fit. This can be done with cross-validation.
+
+
+
+*Cross-validation:* We use `cv.glmnet` to perform cross-validation to obtain an optimal `lambda`. By default, we perform 10 fold cross validation. Note that `glmnet` uses randomization in choosing the folds which we should be able to control better by setting the seed to be the same.  
+
+```{r}
+set.seed(1)
+?cv.glmnet
+cvlasso <- cv.glmnet(X[train,],y[train])
+cvlasso$glmnet.fit  ### glmfit on entire data
+optlambda<- cvlasso$lambda.min
+optlambda
+```
+The optimal value of lambda found from cross validation is `r optlambda`. You can plot the lambda parameter with the cross-validated mean error (cvm). We see that the best fit from model with the optimal lambda gives a much smaller error on the test set than the model which is based on complete linear regression or the model with only an intercept. We can print out the coefficients to identify that 10 variables are chosen (excluding the intercept).
+
+
+```{r}
+plot(cvlasso$lambda,cvlasso$cvm)  ### mean cross-validated error
+predictlassocv <- predict(modellasso,s=optlambda,newx=X[test,])
+mean((predictlassocv-y[test])^2)
+
+coef(modellasso,s=optlambda)
+
+coef(modelbest,10)
+```
+
+
+Note that this does not choose the same model as best subset.

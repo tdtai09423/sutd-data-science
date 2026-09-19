@@ -1,0 +1,373 @@
+---
+title: "Social Progress Index with PCA"
+author: "Bikramjit Das"
+date: "2025"
+output: 
+ html_document: 
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    highlight: tango
+geometry: margin=1in
+fontsize: 12pt
+linkcolor: blue  
+
+---
+
+First, we prepare the working environment.
+```{r}
+rm(list=ls()) # Clear the environment
+# setwd("...")  # Setup the working directory
+# include ggplot if required
+if(!require(ggplot2)){
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+## install factoextra
+#if(!require(factoextra)){
+ # install.packages("factoextra")
+#  library(factoextra)
+#}
+
+```
+
+
+# Introduction
+
+
+**New York Times opinion column:**
+
+https://www.nytimes.com/2020/09/09/opinion/united-states-social-progress.html 
+
+**Social Progress Imperative** 
+
+https://www.socialprogress.org/
+
+Quoting from their report: The Social Progress Index is a well-established measure, published since 2013, that is meant to catalyze improvement and drive action by presenting social outcome data in a useful and reliable way. Composed of multiple dimensions, the Social Progress Index can be used to benchmark success and provide a holistic, transparent, outcome-based measure of a country’s well-being that is independent of economic indicators. Policymakers, businesses, and countries’ citizens alike can use it to compare their country against others on different facets of social progress, allowing the identification of specific areas of strength or weakness. 
+
+We look at a recent social progress data from 2011-2020. Among the 192 countries listed in 2020, 163 are ranked according to Social Progress Index. We will consider this data set for our study.
+
+
+## Motivation
+Can we come up with a reasonable index of social progress from the data that we have?
+
+## Read data
+```{r, results='hide'}
+
+### Read data
+sp2011to2020 <- read.csv("socprog2020.csv")
+sp2011to2020
+### data check
+head(sp2011to2020)
+dim(sp2011to2020)
+```
+
+
+Note that there is a ranking of the countries and a social progress index mentioned here.
+
+## Data processing
+
+We select the relevant parts for use. First we take the country information and remove first few columns. Keep year 2020 and *Ranked* ones.
+
+```{r, results='hide'}
+spi2020<-subset(sp2011to2020,SPI.year =="2020" & Status=="Ranked") ## we only consider the year 2020 and countries which were ranked
+rownames(spi2020)<-spi2020[,2] ## he row names are now country names
+
+spirank<-spi2020[,1]    #### ranks of the countries. to be used later
+spi2020<-spi2020[,-c(1:6)]
+dim(spi2020)
+#spi2020
+```
+
+Then we remove columns which do not have available data (remove "NA").
+
+
+```{r,results='hide'}
+NAobject<-colnames(spi2020)[apply(is.na(spi2020),2,any)]
+spi2020<-spi2020[,!names(spi2020)%in% NAobject]
+### check
+dim(spi2020)
+head(spi2020)
+```
+
+## Singapore
+How is Singapore fairing here? What about the US?
+
+```{r, results='hide'}
+#rownames(spi2020)
+spi2020["Singapore",]
+spi2020["United States",]
+summary(spi2020$Access.to.Basic.Knowledge)
+spi2020[which.max(spi2020$Access.to.Basic.Knowledge),]
+```
+
+We can also compute average over all countries for the different attributes.
+```{r,results='hide'}
+#names(spi2020)
+ Stats<-as.data.frame(cbind(apply(spi2020, 2, mean),apply(spi2020, 2, "median"),apply(spi2020, 2, "sd")))
+ colnames(Stats)<-c("mean", "median","std.dev")
+
+ head(Stats)
+# View(Stats) ## note that they are on different scales
+```
+
+# PCA without scaling
+Let us do some basic principal component analysis for social progress. 
+```{r, results='hide'}
+?prcomp
+pr.out.ns=prcomp(spi2020, scale=F)
+pr.out.ns$rotation[,1]
+a<-pr.out.ns$rotation[,1:3]     ### gives the weights for the PCAs (eigen vectors)
+pr.out.ns$x[1:10,1:5]  ### gives PCA value for 1st 10 countries and first 5 PCAs
+```
+
+## Scree plot
+```{r}
+#plot scree: plot of variance of each PCA
+plot(pr.out.ns, type="l", main="Scree plot")
+
+#plot cumulative prop: proportional variance (cumulative)
+
+pr.var.ns=pr.out.ns$sdev^2
+pve.ns=pr.out.ns$sdev^2/sum(pr.out.ns$sdev^2)
+plot(cumsum(pve.ns), xlab="Principal Component", ylab="Cumulative Proportion of Variance Explained", ylim=c(0,1),type='b')+abline(h=0.9,col="red")
+# first PC explanation
+pve.ns[1]
+```
+
+From the `Scree plot' and the 'Cumulative Proportion plot': The first PC actually explains 93% of the variability.
+
+Let us look at the loadings for each and the PCA scores for the countries. We look at the coefficients of the top and bottom 5. Also we also look at the top and bottom scoring countries for each PC.
+
+## Significant loadings, country rankings 
+
+```{r, results='hide'}
+#pr.out.ns$x
+#pr.out.ns$rotation
+sp.pc<-data.frame(pr.out.ns$x[,1:2])
+sp.pc[order(-sp.pc$PC1),]
+sp.pc[order(-sp.pc$PC2),]
+dim(spi2020)
+
+
+co.sp.pc<-data.frame(pr.out.ns$rotation[,1:2])
+
+View(co.sp.pc)
+
+View(co.sp.pc[order(-co.sp.pc[,1]),][c(1:5,50:54),])
+View(co.sp.pc[order(-co.sp.pc[,2]),][c(1:5,50:54),])
+
+View(Stats)
+``` 
+
+We observe that PC1 explains 93% of the variation and moreover PC1 is dominated by Green house gas emission. So countries like China, US, India, Brazil are clustered and dominate together. On the other hand PC2 seems dominated by mortality rates from infectious disease, child birth and other premature deaths. 
+
+# PCA with scaling
+
+Clearly, these are the components with very high variance anyway. Hence what is often suggested here is to standardize or scale the data.
+
+## Scree plot
+```{r, results='hide'}
+pr.out=prcomp(spi2020, scale=TRUE)
+plot(pr.out, type="l", main="Scree plot")
+plot(pr.out, type="l", main="Scree plot")+abline(h=1,col="red")
+pr.var=pr.out$sdev^2
+pr.var
+pve=pr.var/sum(pr.var)
+pve
+plot(pve, xlab="Principal Component", ylab="Proportion of Variance Explained", ylim=c(0,1),type='b')
+plot(cumsum(pve), xlab="Principal Component", ylab="Cumulative Proportion of Variance Explained", ylim=c(0,1),type='b')  #+ abline(h=0.8,col="red")+abline(v=6,col="blue")
+```
+
+## Significant loadings, country rankings 
+```{r, results='hide'}
+## Which components and which country?
+ sp4<-data.frame(pr.out$x[,1:4])
+ sp4[order(-sp4$PC1),]
+ 
+ cosp4<-data.frame(pr.out$rotation[,1:4])
+ cosp4[order(-cosp4[,1]),]
+``` 
+
+
+
+
+
+
+
+
+## Correlation plot 
+```{r}
+ ## Correlation plot
+ ## Check Stats earlier
+ library(corrplot)
+ corspi<-cor(spi2020)
+ dim(corspi)
+ rownames(corspi)<-colnames(corspi)<-1:54
+ corrplot(corspi,type="upper")
+```
+
+
+# PCA with only the core quantities
+Now, we can go back to the documentation of the data and see that the primary components here are not the core metrics computed. There are three big dimensions: 
+1. Basic Human Needs
+2. Foundations of Well-being
+3. Opportunity
+
+The SPI is an average of these three quantities which are again averages of four different quantities each. We remove this to have the core data to study.
+ 
+```{r}
+  bigdim<-c("Basic.Human.Needs","Foundations.of.Wellbeing","Opportunity")
+ medcomp<-c("Nutrition.and.Basic.Medical.Care","Water.and.Sanitation","Shelter","Personal.Safety","Access.to.Basic.Knowledge","Access.to.Information.and.Communications","Health.and.Wellness","Environmental.Quality","Personal.Rights","Personal.Freedom.and.Choice","Inclusiveness","Access.to.Advanced.Education")
+ 
+ spi2020core<-spi2020[,!names(spi2020)%in% c(bigdim,medcomp)]
+ dim(spi2020core)
+
+ 
+ corspicore<-cor(spi2020core)
+ rownames(corspicore)<-colnames(corspicore)<-1:dim(corspicore)
+```
+
+## Correlation plot
+```{r} 
+ corrplot(corspicore,type="upper")
+```
+
+ Now we conduct a PCA.
+  What we observe is that the PC1 explains 50.0%
+                              PC2 explains 14.2%
+                              PC3 explains  4.6%  
+                              PC4 explains  3.7%
+```{r}
+pr.out.core=prcomp(spi2020core, scale=TRUE)
+#pr.out.core
+plot(pr.out.core, type="l", main="Scree plot for core indicators") +abline(h=1,col="red")
+
+pr.var.core=pr.out.core$sdev^2
+#pr.var.core
+pve.core=pr.var.core/sum(pr.var.core)
+pve.core
+plot(pve.core, xlab="Core indicators: Principal Component", ylab="Proportion of Variance Explained", ylim=c(0,1),type='b')
+plot(cumsum(pve.core), xlab="Core indicators: Principal Component", ylab="Cumulative Proportion of Variance Explained", ylim=c(0,1),type='b')
+```
+
+```{r, results='hide'}
+n<-dim(spi2020core)[1]
+k<-dim(spi2020core)[2]
+
+nup<-5
+kup<-5
+
+
+ sp4.core<-data.frame(pr.out.core$x[,1:4])
+ cosp4.core<-data.frame(pr.out.core$rotation[,1:4])
+ #sp4.core
+ #cosp4.core
+ 
+  
+
+ cosp4.core[order(-cosp4.core[,1]),][c(1:kup,(k-kup+1):k),]
+ topbotPC1<-row.names(cosp4.core[order(-cosp4.core[,1]),])[c(1:kup,(k-kup+1):k)]
+ sp4.core[order(-sp4.core$PC1),][c(1:nup,(n-nup+1):n),]
+ topbotind1<-row.names(sp4.core[order(-sp4.core$PC1),])[c(1:nup,(n-nup+1):n)]
+ 
+ 
+ cosp4.core[order(-cosp4.core[,2]),][c(1:kup,(k-kup+1):k),]
+ topbotPC2<-row.names(cosp4.core[order(-cosp4.core[,2]),])[c(1:kup,(k-kup+1):k)]
+ sp4.core[order(-sp4.core$PC2),][c(1:nup,(n-nup+1):n),]
+ topbotind2<-row.names(sp4.core[order(-sp4.core$PC2),])[c(1:nup,(n-nup+1):n)]
+ 
+ 
+ cosp4.core[order(-cosp4.core[,3]),][c(1:kup,(k-kup+1):k),]
+ topbotPC3<-row.names(cosp4.core[order(-cosp4.core[,3]),])[c(1:kup,(k-kup+1):k)]
+ sp4.core[order(sp4.core$PC3),][c(1:nup,(n-nup+1):n),]
+ topbotind3<-row.names(sp4.core[order(-sp4.core$PC3),])[c(1:nup,(n-nup+1):n)]
+ 
+ 
+ cosp4.core[order(-cosp4.core[,4]),][c(1:kup,(k-kup+1):k),]
+ topbotPC4<-row.names(cosp4.core[order(-cosp4.core[,3]),])[c(1:kup,(k-kup+1):k)]
+ sp4.core[order(-sp4.core$PC4),][c(1:nup,(n-nup+1):n),]
+ topbotind4<-row.names(sp4.core[order(-sp4.core$PC4),])[c(1:nup,(n-nup+1):n)]
+
+ # Check that there is no correlation.
+ #corspipc<-cor(pr.out.core$x)
+ #corrplot(corspipc,type="upper")
+ 
+```
+ 
+ 
+1. PC1: Foundations of well-being, health and wellness (+), ... Basic human needs: lack of water and sanitation/shelter  (-) 
+
+2. PC2: Opportunity, lack of personal rights (-), ... Foundations of well-being, environment quality (+)
+
+3. PC3: ...
+
+
+# Plotting the component loadings and the individuals
+
+## This part is optional and will not be tested
+
+Now we do some plotting of component loadings and the individual countries along PCAs. We use soemthing called a biplot. The library `factoextra` is used here.
+ 
+```{r}
+library(factoextra)
+ #fviz_eig(pr.out)
+ fviz_pca_ind(pr.out.core, labelsize=3,
+             col.ind = "contrib", # Color by the quality of representation
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             geom = c("point","text"),
+             #select.ind = list(cos2 = 30),
+             select.ind= list(name=c(topbotind1,topbotind2)),
+             repel = TRUE     # Avoid text overlapping
+             )
+ 
+ ggsave("CountryPC1PC2.png")
+ 
+ fviz_pca_var(pr.out.core, labelsize=3,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             select.var = list(name=c(topbotPC1,topbotPC2)),
+             repel = TRUE     # Avoid text overlapping
+             )
+ 
+  ggsave("PC1PC2.png")
+  
+
+  fviz_pca_ind(pr.out.core, labelsize=3,
+             col.ind = "contrib", # Color by the quality of representation
+             axes=c(3,4),
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             geom = c("point","text"),
+             #select.ind = list(cos2 = 30),
+             #theme(text = element_text(size = 2)),
+             select.ind= list(name=c(topbotind3,topbotind4)),
+             repel = TRUE     # Avoid text overlapping
+             )
+  
+   ggsave("CountryPC3PC4.png")
+
+ fviz_pca_var(pr.out.core, labelsize=3,
+             col.var = "cos2", # Color by contributions to the PC
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             axes=c(3,4),
+             select.var = list(name=c(topbotPC3,topbotPC4)),
+             repel = TRUE     # Avoid text overlapping
+             )
+  ggsave("PC3PC4.png")
+
+```
+
+# An index of our own
+ 
+Can we come up with a rank based on the PCAs. We can just use the first PCA. In general it is not suggested that we add scores from different PCAs ... but if we still go ahead and do that for one more.
+
+```{r}
+spi_slds<-data.frame(sp4.core[,1])#-sp4.core[,2])#-sp4.core[,3]+sp4.core[,4])
+rownames(spi_slds)<-rownames(sp4.core)
+spi_slds$rank<-rank(-spi_slds)
+spi_slds$spirank<-spirank
+colnames(spi_slds)<-c("Score","Rank SLDS","Rank SPI")
+spi_slds[order(spi_slds[,2]),][c(1:10,154:163),]
+```
+
+###### End of PCA Analysis for Social Progress data.

@@ -1,0 +1,157 @@
+---
+title: "Image compression with SVD"
+author: "Bikramjit Das"
+date: "2025"
+output: 
+ html_document: 
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    highlight: tango
+geometry: margin=1in
+fontsize: 12pt
+linkcolor: blue    
+---
+# Data Preparation
+
+First, we prepare the working environment.
+
+```{r}
+rm(list=ls()) # Clear the environment
+# setwd("...")  # Setup the working directory
+```
+
+### Installation
+
+Install the jpeg package which we will use for analysis.
+```{r}
+#install.packages("jpeg")
+library(jpeg)
+?readJPEG
+```
+
+This reads the image of ship which is originally of size around 400 KB. It reads it into an array of size `1200 x 1600 x 3` where the dimensions are `height x width * channel`.
+```{r}
+ship <- readJPEG("ship.jpg" )
+str(ship)
+```
+
+![](ship.jpg)
+This is a grayscale image where the value of each pixel is a single number that carries the intensity information from 0 (white) to 1 (black) with different shades of gray taking values between 0 and 1. 
+```{r}
+min(ship)
+max(ship)
+```
+We can also verify that all three channels have the same values (when you have color images these values will be different).
+```{r}
+max(abs((ship[,,1]-ship[,,2])))
+max(abs((ship[,,1]-ship[,,3])))
+```
+
+# Singular value decomposition
+
+We will now perform a SVD on this matrix. This creates three objects, namely, `d` consisting of singular values (1200), `u` consisting of left singular vectors (1200 * 1200) and `v` consisting of right singular vectors (1600 * 1200). 
+```{r}
+?svd
+s <- svd(ship[,,1])
+str(s)
+```
+Let us now develop a low rank approximation. As we see the singular values have a few high values and then it quickly drops off.
+```{r}
+plot(s$d)
+```
+
+Let us create a rank one approximation to the matrix
+```{r}
+s1 <- s$d[1]*s$u[,1]%*%t(s$v[,1])
+str(s1)
+?writeJPEG
+writeJPEG(s1,"s1.jpg")
+```
+![](s1.jpg)
+
+Let us create a rank ten  approximation to the matrix
+
+```{r}
+s10 <- s$u[,1:10]%*%diag(s$d[1:10])%*%t(s$v[,1:10])
+str(s10)
+writeJPEG(s10,"s10.jpg")
+```
+![](s10.jpg)
+
+```{r}
+s100 <- s$u[,1:100]%*%diag(s$d[1:100])%*%t(s$v[,1:100])
+str(s100)
+writeJPEG(s100,"s100.jpg")
+```
+![](s100.jpg)
+
+The first singular value accounts for 84.18%, the first ten singular values accounts for 91.74% and the first hundred singular values accounts for 98.09%.  
+```{r}
+var <- cumsum(s$d^2)
+str(var)
+plot(1:1200,var/max(var))
+var[1]/max(var)
+var[10]/max(var)
+var[100]/max(var)
+```
+
+
+
+
+# RGB Image
+
+
+We now repeat the analysis using a RGB image
+
+```{r}
+pansy <- readJPEG("pansy.jpg")
+str(pansy)
+```
+![](pansy.jpg)
+
+
+The figure has a size of 78.8 KB. This is read into an array of size 600 x 465 x 3,
+height x width x channel (with each channel representing the RGB intensity.
+Note that in this case pansy[,,1] is different than pansy[,,2].
+
+```{r}
+max(abs((pansy[,,1]-pansy[,,2])))
+```
+
+Let's now perform the Singular Value Decomposition (SVD) on the different channels
+```{r}
+s1 <- svd(pansy[,,1])
+s2 <- svd(pansy[,,2])
+s3 <- svd(pansy[,,3])
+```
+
+Develop low rank approximation (with rank 50). Initialize the vector for storing the approximation
+```{r}
+pansy50 <- array(dim=c(600,465,3))
+pansy50[,,1] <- s1$u[,1:50]%*%diag(s1$d[1:50])%*%t(s1$v[,1:50])
+pansy50[,,2] <- s2$u[,1:50]%*%diag(s2$d[1:50])%*%t(s2$v[,1:50])
+pansy50[,,3] <- s3$u[,1:50]%*%diag(s3$d[1:50])%*%t(s3$v[,1:50])
+```
+
+Save the image in a jpeg file of size ~40 kb, which has some blurring edges of the flower and leaves.
+
+```{r}
+writeJPEG(pansy50,"pansy50.jpg")
+```
+![](pansy50.jpg)
+
+Let's retry with a higher approximation.
+
+```{r}
+pansy350 <- array(dim=c(600,465,3))
+pansy350[,,1] <- s1$u[,1:350]%*%diag(s1$d[1:350])%*%t(s1$v[,1:350])
+pansy350[,,2] <- s2$u[,1:350]%*%diag(s2$d[1:350])%*%t(s2$v[,1:350])
+pansy350[,,3] <- s3$u[,1:350]%*%diag(s3$d[1:350])%*%t(s3$v[,1:350])
+writeJPEG(pansy350,"pansy350.jpg") # --> much better!
+```
+![](pansy350.jpg)
+
+
+
+#### End of notes

@@ -1,0 +1,157 @@
+---
+title: "Model selection: Economic growth Notebook"
+author: "Bikramjit Das"
+date: "2025"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+    toc: yes
+    toc_depth: 2
+    number_sections: yes
+---
+
+# The Economic Growth data set
+
+* We will use a data set that was used in the papers: **I just ran two million regressions** by *Sala-I-Martin* and **Model uncertainty in cross country growth regression** by *Fernandez et. al.*  
+*  The data set has 41 possible explanatory variables with 72 countries. The data consists of 43 columns with the Country, `y` (economic growth in per capita GDP) and 41 possible predictor variables.  
+
+```{r results='hide'}
+rm(list=ls()) # remove all objects
+
+eg <- read.csv("economicgrowth.csv")
+str(eg)
+eg1 <- subset(eg,select=-c(Country))
+str(eg1)
+```
+
+* We now conduct model selection by exhaustive search. Note that we have 2^41 which is approximately 2 trillion possible regressions to run. 
+
+* The `leaps` package has some smart ways to search over this space by avoiding visiting parts of the space where the optimum cannot exist. It employs a *branch and bound* algorithm to search more efficiently. This would take a few minutes to run on a laptop.  
+
+* The model shows the bias-variance trade-off. We can also plot the variables identified using the plot command.  
+
+## Best subset selection
+
+```{r}
+library(leaps)
+model1 <- regsubsets(y~.,data=eg1,nvmax=41)
+```
+
+A summary of `model1` is given below:
+
+
+```{r results= "hide"}
+summary(model1)
+```
+
+### Plots of $R^2$, Adjusted-$R^2$.
+
+We plot $R^2$ and Adjusted-$R^2$ for the best subset of a particular size. 
+```{r fig.height=7,fig.width=7}
+plot(summary(model1)$rsq)
+plot(summary(model1)$adjr2)
+which.max(summary(model1)$adjr2)  ### which model is the best model
+```
+Naturally $R^2$ increases as the number of explanatory variables increase. On the other hand Adjusted-$R^2$ increases first and then decreases. We find that it reaches a maximum for a subset of size 27.
+
+
+### Plots of the best subset selected 
+
+Here we plot the best subset of different sizes which are selected using $R^2$ and  Adjusted-$R^2$.
+
+```{r fig.height=7,fig.width=7}
+plot(model1,scale=c("r2"))
+plot(model1,scale=c("adjr2"))
+```
+
+## Forward subset selection
+
+We next use the forward step-wise selection method which runs much faster as should be expected. Note that the results are not identical to what we obtained with the exhaustive selection approach. 
+
+```{r fig.height=7,fig.width=7}
+model2 <- regsubsets(y~.,data=eg1,nvmax=41,method="forward")
+
+plot(summary(model2)$rsq)
+plot(summary(model2)$adjr2)
+plot(summary(model2)$cp)   ## Mallow's Cp
+
+
+plot(model2,scale=c("r2"))
+plot(model2,scale=c("adjr2"))
+
+```
+
+## Which variables are selected using Best subset and Forward subset?
+
+```{r results='hide'}
+summary(model1)$which
+summary(model2)$which
+
+```
+
+The results indicate that with `model 1`, we have   
+  1) `EquipInv`,     
+  2) `Confucian`, `EquipInv`,     
+  3) `Buddha`, `Confucian`, `EquipInv`,     
+  4) `YrsOpen`, `Confucian`, `Protestants`, `EquipInv`     
+
+while for `model 2`, we have  
+
+  1) `EquipInv`,     
+  2) `Confucian`, `EquipInv`,     
+  3) `Buddha`, `Confucian`, `EquipInv`,     
+  4) `Buddha`, `Protestants`, `EquipInv`, `Confucian`    
+         and so on. 
+         
+* The results are different from the two models.    
+
+
+# LASSO
+
+ The results indicate that certain variables such as `EquipInv`, `YrsOpen` and `Confucian` appear for many values of `lambda`, while some other variables such as `Abslat` do not show up as often. Such results help illustrate the reliability of possible predictors for economic growth and can also cast doubts on the robustness of the results for certain variables which might be proposed as being correlated with growth.
+  
+We use the library `glmnet` to perform LASSO. 
+ 
+```{r}
+library(glmnet)
+x <- as.matrix(eg1[,c(2:42)])
+grid<-10^seq(10,-2, length=100)
+model3 <- glmnet(x,eg1$y,lambda=grid)
+model3
+
+model4 <- glmnet(x,eg1$y)
+
+model4
+
+
+?coef
+coef(model4, s=0.005)
+
+
+
+model4$lambda
+model4$df
+model4$beta["EquipInv",]
+model4$beta["YrsOpen",]
+model4$beta["Confucian",]
+model4$beta["Abslat",]
+plot(model4,xvar="lambda")
+model4$beta
+model4$beta !=0
+
+
+
+
+set.seed(1)
+
+cvlassoeg <- cv.glmnet(x,eg1$y)
+cvlassoeg$glmnet.fit  ### glmfit on entire data
+optlambdaeg<- cvlassoeg$lambda.min
+optlambdaeg
+
+
+coef(model4, exact=T,s=optlambdaeg)
+```
+
+

@@ -1,0 +1,14 @@
+\section{Discussion}\label{sec:discussion}
+
+\subsection{Interpretation}
+Beyond the raw rankings, three findings stand out. First, hyperparameter optimisation is not a universal win. PPSO helped the two gradient-boosted models, whose accuracy depends heavily on learning rate and regularisation strength, but it actually hurt Random Forest. This makes sense: RF's bagging mechanism is inherently stable across a wide range of hyperparameters, so an aggressive search is more likely to overfit the cross-validation folds than to find a genuinely better configuration. Had we only tuned CatBoost---as is common in the literature---this distinction would have been invisible, and the reported gains could easily be mistaken for algorithmic superiority rather than a tuning artefact.
+
+Second, the strong showing of Linear Regression tells us something important about the problem structure. Once we include lag-1 demand and rolling statistics, most of the daily signal is already captured linearly. The non-linear models earn their keep on the residual: weather--calendar interactions (e.g.\ a hot weekday versus a cool public holiday) that a linear model cannot represent. CatBoost's native categorical handling is especially well-suited here, which helps explain why it pulls ahead of XGBoost and RF once PPSO finds good hyperparameters.
+
+Third, using time-series cross-validation inside the PPSO fitness function turned out to be essential. Early experiments with random K-fold produced optimistic fitness values that did not hold up on the test period. Respecting temporal order in every evaluation step---from the train/test split down to the inner CV folds---was critical for honest results.
+
+\subsection{Limitations}
+Several limitations should be kept in mind. Daily aggregation hides intra-day peaks; Open-Meteo reanalysis data may differ from ground-station measurements; external shocks such as economic events or policy changes are not modelled; PPSO is stochastic and our results reflect a single seeded run; and multi-day portal forecasts inherit whatever error exists in the upstream weather forecast.
+
+\subsection{Future work}
+Moving to hourly resolution with intra-day features would be the most impactful next step. We would also like to run multi-seed PPSO experiments with statistical significance testing, benchmark sequence models (LSTM, Transformer) under the same fair-tuning protocol, and add online retraining to the deployed portal so the model stays current as demand patterns evolve.
