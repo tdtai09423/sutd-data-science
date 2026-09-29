@@ -1,0 +1,15 @@
+{
+  "name": "laundrybot",
+  "version": "1.0.0",
+  "description": "WhatsApp Cloud API queue bot for shared washers and dryers, plus a JSON API for the ESP32 tags.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js",
+    "dev": "DEV=1 node --env-file-if-exists=.env --watch server.js"
+  },
+  "engines": { "node": ">=20.12" },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
