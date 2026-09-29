@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LaundryBot</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:#f4f6fb;color:#0f172a;font-family:Inter,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding:16px}
+  main{width:100%;max-width:760px}
+  h1{font-size:20px;margin:4px 0 12px;text-align:center}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:20px;box-shadow:0 8px 24px rgba(15,23,42,.06)}
+  svg{display:block;width:100%;height:auto;border-radius:20px}
+  .story{margin-top:14px;padding:20px;text-align:center}
+  .num{font-size:13px;font-weight:700;color:#2563eb}
+  h2{margin:6px 0 6px;font-size:24px}
+  p{margin:0 auto;max-width:520px;font-size:17px;line-height:1.5;color:#334155}
+  .nav{display:flex;align-items:center;justify-content:space-between;margin-top:18px;gap:12px}
+  button{font:inherit;font-weight:700;font-size:16px;height:48px;padding:0 22px;border-radius:14px;border:1px solid #e2e8f0;background:#fff;cursor:pointer}
+  button.next{background:#2563eb;border-color:#2563eb;color:#fff}
+  button:disabled{opacity:.35;cursor:default}
+  .dots{display:flex;gap:8px}
+  .dots i{width:10px;height:10px;border-radius:9px;background:#cbd5e1;transition:.3s}
+  .dots i.on{width:26px;background:#2563eb}
+  .legend{display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-top:14px;font-size:14px;color:#475569}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend b{width:14px;height:14px;border-radius:4px;display:inline-block}
+  .screen{transition:fill .4s}
+  .bubble{font:600 13px/1.35 Inter,sans-serif;padding:8px 10px;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.12);margin-bottom:6px;animation:pop .3s ease}
+  .bubble.me{background:#d9fdd3;margin-left:14px}
+  @keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @media (max-width:520px){ h2{font-size:20px} p{font-size:15px} button{padding:0 16px} }
+</style>
+</head>
+<body>
+<main>
+  <h1>🧺 How the laundry tags work</h1>
+
+  <div class="card">
+    <svg viewBox="0 0 800 460" id="svg">
+      <rect width="800" height="460" fill="#f8fafc"/>
+      <rect y="430" width="800" height="30" fill="#e2e8f0"/>
+
+      <!-- connection lines -->
+      <g stroke="#cbd5e1" stroke-width="3" stroke-dasharray="6 8" fill="none">
+        <line x1="620" y1="170" x2="330" y2="75"/>
+        <line x1="250" y1="95" x2="160" y2="158"/>
+        <line x1="310" y1="95" x2="400" y2="158"/>
+      </g>
+
+      <!-- cloud -->
+      <g transform="translate(280 62)">
+        <circle cx="-34" cy="8" r="24" fill="#fff" stroke="#bfdbfe" stroke-width="2"/>
+        <circle cx="34" cy="8" r="24" fill="#fff" stroke="#bfdbfe" stroke-width="2"/>
+        <circle cx="0" cy="-8" r="32" fill="#fff" stroke="#bfdbfe" stroke-width="2"/>
+        <rect x="-56" y="4" width="112" height="28" rx="14" fill="#fff"/>
+        <text y="16" text-anchor="middle" font-weight="800" font-size="14" fill="#1d4ed8">Queue bot</text>
+      </g>
+
+      <g id="machines"></g>
+
+      <!-- phone -->
+      <g transform="translate(600 150)">
+        <rect width="140" height="230" rx="18" fill="#0f172a"/>
+        <rect x="7" y="10" width="126" height="210" rx="12" fill="#efeae2"/>
+        <rect x="7" y="10" width="126" height="30" rx="12" fill="#008069"/>
+        <rect x="7" y="26" width="126" height="14" fill="#008069"/>
+        <text x="70" y="30" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">WhatsApp</text>
+        <foreignObject x="12" y="46" width="116" height="170"><div xmlns="http://www.w3.org/1999/xhtml" id="msg"></div></foreignObject>
+        <text id="who" x="70" y="252" text-anchor="middle" font-weight="700" font-size="15" fill="#334155">Alex's phone</text>
+      </g>
+
+      <circle id="dot" r="10" fill="#2563eb" stroke="#fff" stroke-width="4" opacity="0"/>
+    </svg>
+  </div>
+
+  <div class="legend">
+    <span><b style="background:#16a34a"></b>Free</span>
+    <span><b style="background:#2563eb"></b>In use</span>
+    <span><b style="background:#f59e0b"></b>Done – collect clothes</span>
+    <span><b style="background:#9333ea"></b>Next person</span>
+  </div>
+
+  <div class="card story">
+    <div class="num" id="num"></div>
+    <h2 id="title"></h2>
+    <p id="text"></p>
+    <div class="nav">
+      <button id="prev">← Back</button>
+      <div class="dots" id="dots"></div>
+      <button id="next" class="next">Next →</button>
+    </div>
+  </div>
+</main>
+
+<script>
+const NS = 'http://www.w3.org/2000/svg';
+const $ = id => document.getElementById(id);
+
+// Draw a machine with its lightweight tag stuck on the front
+function machine(key, x, label){
+  const g = document.createElementNS(NS, 'g');
+  g.innerHTML = `
+    <rect x="${x}" y="140" width="200" height="290" rx="18" fill="#fff" stroke="#d5dce6" stroke-width="2"/>
+    <text x="${x+100}" y="420" text-anchor="middle" font-size="13" font-weight="700" fill="#94a3b8">${label}</text>
+    <circle cx="${x+100}" cy="340" r="58" fill="#e2e8f0"/>
+    <circle cx="${x+100}" cy="340" r="47" fill="#334155"/>
+    <g id="${key}Drum">
+      <ellipse cx="${x+100}" cy="322" rx="15" ry="9" fill="#ef4444"/>
+      <ellipse cx="${x+118}" cy="348" rx="15" ry="9" fill="#facc15" transform="rotate(60 ${x+118} 348)"/>
+      <ellipse cx="${x+82}" cy="348" rx="15" ry="9" fill="#60a5fa" transform="rotate(-60 ${x+82} 348)"/>
+    </g>
+    <circle cx="${x+100}" cy="340" r="52" fill="rgba(191,219,254,.2)" stroke="#94a3b8" stroke-width="6"/>
+
+    <!-- tag -->
+    <rect x="${x+14}" y="156" width="172" height="100" rx="14" fill="#1e293b"/>
+    <rect id="${key}Screen" class="screen" x="${x+21}" y="163" width="158" height="86" rx="9" fill="#16a34a"/>
+    <text id="${key}Status" x="${x+31}" y="186" font-size="12" font-weight="700" fill="rgba(255,255,255,.85)">FREE</text>
+    <text id="${key}Name" x="${x+31}" y="212" font-size="20" font-weight="800" fill="#fff">—</text>
+    <text id="${key}Sub" x="${x+31}" y="236" font-size="11" font-weight="600" fill="#fff">Scan to start</text>
+    <rect x="${x+127}" y="177" width="44" height="44" rx="4" fill="#fff"/>
+    <path transform="translate(${x+131} 181)" d="M0 0h12v12H0zM24 0h12v12H24zM0 24h12v12H0zM3 3v6h6V3zM27 3v6h6V3zM3 27v6h6v-6zM18 2h3v3h-3zM16 16h4v4h-4zM24 18h4v4h-4zM30 26h4v4h-4zM20 30h4v4h-4z" fill="#0f172a" fill-rule="evenodd"/>
+    <text x="${x+149}" y="238" text-anchor="middle" font-size="8" font-weight="700" fill="#fff">SCAN ME</text>`;
+  $('machines').appendChild(g);
+}
+machine('w', 60, 'WASHER');
+machine('d', 300, 'DRYER');
+
+// callout pointing at the tag
+$('machines').insertAdjacentHTML('beforeend', `
+  <text x="510" y="200" font-size="13" font-weight="700" fill="#db2777">← tag</text>
+  <text x="510" y="217" font-size="11" fill="#64748b">sticks on</text>
+  <text x="510" y="231" font-size="11" fill="#64748b">no wiring</text>`);
+
+// where the moving dot travels
+const P = { phone:[620,170], cloud:[280,80], w:[160,160], d:[400,160] };
+
+const FREE = { color:'#16a34a', status:'FREE', name:'—', sub:'Scan to start' };
+const STEPS = [
+  { title:'A tag on each machine', text:'A light tag sticks on the washer and dryer. Its colour shows if the machine is free, and it has a QR code to scan.',
+    who:'Alex', w:FREE, d:FREE, spin:false, route:[], chat:[] },
+  { title:'Alex scans the washer tag', text:'The QR code opens WhatsApp. Alex sends one message and the tag turns blue with Alex’s name.',
+    who:'Alex', w:{ color:'#2563eb', status:'IN USE', name:'Alex', sub:'Done at 10:45' }, d:FREE, spin:true,
+    route:['phone','cloud','w'], chat:[['me','Start washer'],['bot','✅ Washer is yours, Alex! I’ll remind you at 10:45.']] },
+  { title:'Maya joins the queue', text:'The washer is busy, so Maya scans the same tag. The bot puts her in line and the tag shows she’s next.',
+    who:'Maya', w:{ color:'#2563eb', status:'IN USE', name:'Alex', sub:'Next: Maya' }, d:FREE, spin:true,
+    route:['phone','cloud','w'], chat:[['me','Start washer'],['bot','Washer is busy. You’re #1 in the queue 👍']] },
+  { title:'Time’s up', text:'When the wash time ends, the tag turns amber and the bot reminds Alex to collect the clothes.',
+    who:'Alex', w:{ color:'#f59e0b', status:'DONE', name:'Alex', sub:'Collect clothes' }, d:FREE, spin:false,
+    route:['cloud','w','cloud','phone'], chat:[['bot','🧺 Your wash is done, Alex! Reply DONE when you’ve collected.']] },
+  { title:'Maya’s turn', text:'Alex replies DONE. The tag turns purple with Maya’s name, and the bot tells Maya it’s her turn.',
+    who:'Maya', w:{ color:'#9333ea', status:'NEXT UP', name:'Maya', sub:'Scan in 10 min' }, d:FREE, spin:false,
+    route:['cloud','w','cloud','phone'], chat:[['bot','🟣 Your turn, Maya! Scan the washer tag to start.']] },
+];
+
+let step = 0, anim = null, angle = 0, timer = null;
+STEPS.forEach(()=> $('dots').appendChild(document.createElement('i')));
+
+function setTag(key, t){
+  $(key+'Screen').setAttribute('fill', t.color);
+  $(key+'Status').textContent = t.status;
+  $(key+'Name').textContent = t.name;
+  $(key+'Sub').textContent = t.sub;
+}
+function apply(s){
+  setTag('w', s.w); setTag('d', s.d);
+  $('msg').innerHTML = s.chat.map(([from,t])=>`<div class="bubble ${from}">${t}</div>`).join('');
+}
+
+function show(i){
+  step = i; const s = STEPS[i];
+  $('num').textContent = `Step ${i+1} of ${STEPS.length}`;
+  $('title').textContent = s.title;
+  $('text').textContent = s.text;
+  [...$('dots').children].forEach((d,k)=> d.classList.toggle('on', k===i));
+  $('prev').disabled = i===0;
+  $('next').textContent = i===STEPS.length-1 ? 'Start again' : 'Next →';
+  $('who').textContent = `${s.who}'s phone`;
+  // show the user's own message first, then the rest when the dot arrives
+  const mine = s.chat.filter(c=>c[0]==='me');
+  $('msg').innerHTML = mine.map(([f,t])=>`<div class="bubble me">${t}</div>`).join('');
+  anim = s.route.length ? { route:s.route, t0:performance.now() } : null;
+  if(!anim) apply(s);
+  // fallback so the tag still updates if animation frames are paused (e.g. background tab)
+  clearTimeout(timer);
+  if(anim) timer = setTimeout(()=>{ if(anim && STEPS[step]===s){ anim = null; $('dot').setAttribute('opacity', 0); apply(s); } }, (s.route.length-1)*900 + 100);
+}
+
+function frame(now){
+  const s = STEPS[step], dot = $('dot');
+  if(anim){
+    const legs = anim.route.length - 1, k = Math.max(0, (now - anim.t0) / 900);
+    if(k >= legs){ dot.setAttribute('opacity', 0); apply(s); anim = null; }
+    else {
+      const i = Math.floor(k), f = k - i, a = P[anim.route[i]], b = P[anim.route[i+1]];
+      dot.setAttribute('cx', a[0] + (b[0]-a[0])*f);
+      dot.setAttribute('cy', a[1] + (b[1]-a[1])*f);
+      dot.setAttribute('opacity', 1);
+    }
+  }
+  if(s.spin && !anim) angle += 4;
+  $('wDrum').setAttribute('transform', `rotate(${angle} 160 340)`);
+  requestAnimationFrame(frame);
+}
+
+$('next').onclick = ()=> show(step===STEPS.length-1 ? 0 : step+1);
+$('prev').onclick = ()=> show(Math.max(0, step-1));
+addEventListener('keydown', e=>{ if(e.key==='ArrowRight') $('next').click(); if(e.key==='ArrowLeft') $('prev').click(); });
+
+show(0);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

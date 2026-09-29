@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LaundryBot Pitch</title>
+<meta name="description" content="LaundryBot: seamless queuing for shared laundry in condos, dorms and co-living.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#3c3c3c; --muted:#7a7a7a; --line:#e5e5e5; --bg:#f3f8fd;
+    --green:#58cc02; --green-d:#58a700; --blue:#1cb0f6; --blue-d:#1899d6;
+    --amber:#ff9600; --purple:#ce82ff; --red:#ff4b4b; --yellow:#ffc800;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#dfe9f3;font-family:Nunito,system-ui,sans-serif;color:var(--ink);overflow:hidden}
+  /* 16:9 stage scaled to fit the window */
+  .viewport{position:fixed;inset:0;display:grid;place-items:center}
+  .stage{position:relative;width:1280px;height:720px;transform-origin:center;background:var(--bg);border-radius:28px;overflow:hidden;box-shadow:0 20px 60px rgba(20,40,70,.18)}
+  .slide{position:absolute;inset:0;padding:64px 80px;display:flex;flex-direction:column;opacity:0;pointer-events:none;transform:translateX(40px);transition:opacity .45s,transform .55s cubic-bezier(.3,1.3,.5,1)}
+  .slide.on{opacity:1;pointer-events:auto;transform:none}
+  .slide.left{transform:translateX(-40px)}
+  .kicker{font-size:15px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--blue-d)}
+  h1{font-size:64px;line-height:1.05;margin:10px 0 18px;font-weight:900;letter-spacing:-.02em}
+  h2{font-size:48px;line-height:1.08;margin:10px 0 18px;font-weight:900;letter-spacing:-.015em}
+  p.lead{font-size:24px;line-height:1.45;color:#555;font-weight:700;max-width:760px;margin:0}
+  .hl{color:var(--blue-d)} .hl-r{color:#e23b3b} .hl-g{color:var(--green-d)} .hl-p{color:#a568cc}
+  .row{display:flex;gap:28px;align-items:stretch}
+  .grow{flex:1}
+  .card{background:#fff;border:3px solid var(--line);border-radius:26px;box-shadow:0 6px 0 var(--line);padding:22px 24px}
+  .card h3{margin:10px 0 6px;font-size:23px;font-weight:900}
+  .card p{margin:0;font-size:17px;line-height:1.45;color:#666;font-weight:700}
+  .icon{width:64px;height:64px}
+  .pill{display:inline-block;padding:6px 14px;border-radius:99px;font-weight:900;font-size:14px;letter-spacing:.04em;color:#fff}
+  .num{font-size:15px;font-weight:900;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:#fff;background:var(--blue);box-shadow:0 3px 0 var(--blue-d)}
+  .bottom{margin-top:auto}
+  .pop{animation:pop .6s cubic-bezier(.3,1.6,.5,1) both}
+  .slide.on .d1{animation-delay:.1s}.slide.on .d2{animation-delay:.2s}.slide.on .d3{animation-delay:.3s}.slide.on .d4{animation-delay:.4s}.slide.on .d5{animation-delay:.5s}
+  .slide:not(.on) .pop{animation:none}
+  @keyframes pop{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:none}}
+  @keyframes bob{50%{transform:translateY(-8px)}}
+  @keyframes wig{0%,100%{transform:rotate(0)}25%{transform:rotate(-6deg)}75%{transform:rotate(6deg)}}
+
+  /* chat mock */
+  .phone{width:300px;background:#0f172a;border-radius:34px;padding:12px;box-shadow:0 14px 30px rgba(0,0,0,.2)}
+  .screen{background:#efeae2;border-radius:24px;overflow:hidden}
+  .wa{background:#008069;color:#fff;padding:12px 14px;font-weight:900;font-size:15px;display:flex;align-items:center;gap:8px}
+  .wa i{width:28px;height:28px;border-radius:50%;background:#25d366;display:grid;place-items:center;font-style:normal}
+  .msgs{padding:12px;display:flex;flex-direction:column;gap:7px;min-height:330px}
+  .b{max-width:88%;padding:8px 10px;border-radius:12px;font-size:13.5px;font-weight:700;line-height:1.35;background:#fff;box-shadow:0 2px 0 rgba(0,0,0,.06)}
+  .b.me{align-self:flex-end;background:#d9fdd3}
+  .b.alert{background:#ffe1e1;border:2px solid #ffb3b3}
+
+  /* LCD mock */
+  .lcd{background:#237a3c;border-radius:10px;padding:10px;display:inline-block;box-shadow:0 5px 0 #1b5e2e}
+  .lcd pre{margin:0;background:#b8d43a;color:#1f2a10;font:800 17px/1.35 ui-monospace,Menlo,monospace;padding:10px 12px;border-radius:4px;white-space:pre}
+
+  /* nav */
+  .nav{position:absolute;left:0;right:0;bottom:22px;display:flex;justify-content:center;align-items:center;gap:8px;z-index:5}
+  .dots{display:flex;gap:7px}
+  .dots i{width:10px;height:10px;border-radius:9px;background:#cbd5e1;cursor:pointer;transition:.3s}
+  .dots i.on{width:28px;background:var(--blue)}
+  .arrow{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:16px;border:2px solid var(--line);background:#fff;box-shadow:0 4px 0 var(--line);font:900 20px Nunito,sans-serif;color:#777;cursor:pointer;z-index:5;transition:transform .18s cubic-bezier(.3,1.8,.5,1)}
+  .arrow:hover{transform:translateY(calc(-50% - 3px))}
+  .arrow.prev{left:14px} .arrow.next{right:14px}
+  .count{position:absolute;top:22px;right:28px;font-weight:900;color:#9aa6b6;font-size:14px;z-index:5}
+  .brand{position:absolute;top:20px;left:28px;display:flex;align-items:center;gap:8px;font-weight:900;font-size:16px;color:#6b7684;z-index:5}
+  .b3{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:18px;padding:0 26px;height:60px;font:900 20px Nunito,sans-serif;letter-spacing:.03em;text-transform:uppercase;color:#fff;background:var(--green);box-shadow:0 6px 0 var(--green-d);text-decoration:none;cursor:pointer;transition:transform .18s cubic-bezier(.3,1.8,.5,1),box-shadow .18s}
+  .b3:hover{transform:translateY(-3px);box-shadow:0 9px 0 var(--green-d)}
+  .b3.blue{background:var(--blue);box-shadow:0 6px 0 var(--blue-d)}
+  .note{font-size:13px;color:#8a94a6;font-weight:700}
+</style>
+</head>
+<body>
+<div class="viewport"><div class="stage" id="stage">
+  <div class="brand"><svg width="26" height="26" viewBox="0 0 48 48" class="ico-washer"></svg>LaundryBot</div>
+  <div class="count" id="count"></div>
+
+  <!-- 1 · Hook -->
+  <section class="slide" data-title="Hook">
+    <div class="row" style="align-items:center;height:100%">
+      <div class="grow">
+        <div class="kicker pop">Shared laundry, sorted</div>
+        <h1 class="pop d1">Laundry day<br>shouldn't be a <span class="hl-r">fight</span>.</h1>
+        <p class="lead pop d2">Everyone needs clean, dry clothes. In shared housing, getting them takes luck, patience and a lot of stairs. 🧦</p>
+      </div>
+      <div class="pop d3" style="width:420px;display:grid;place-items:center">
+        <svg viewBox="0 0 200 200" width="380" style="animation:bob 3s ease-in-out infinite">
+          <ellipse cx="100" cy="185" rx="70" ry="8" fill="rgba(0,0,0,.08)"/>
+          <path d="M28 90h144l-16 84a10 10 0 0 1-10 8H54a10 10 0 0 1-10-8Z" fill="#e08600"/>
+          <path d="M28 82h144l-16 84a10 10 0 0 1-10 8H54a10 10 0 0 1-10-8Z" fill="#ffb020"/>
+          <path d="M44 108h112M48 132h104M52 154h96" stroke="#e08600" stroke-width="6" stroke-linecap="round"/>
+          <ellipse cx="62" cy="72" rx="30" ry="18" fill="#ff86d0"/><ellipse cx="110" cy="60" rx="34" ry="20" fill="#84d8ff"/>
+          <ellipse cx="148" cy="74" rx="28" ry="17" fill="#fff" stroke="#e5ebf2" stroke-width="3"/><ellipse cx="96" cy="40" rx="26" ry="15" fill="#ffc800"/>
+          <ellipse cx="128" cy="30" rx="20" ry="12" fill="#58cc02"/>
+          <g fill="none" stroke="#8fae3a" stroke-width="5" stroke-linecap="round"><path d="M70 22q8-8 0-16"/><path d="M150 40q8-8 0-16"/></g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · Problem: basic need, overloaded -->
+  <section class="slide" data-title="Problem 1">
+    <div class="kicker pop">The problem · 1</div>
+    <h2 class="pop d1">Laundry is a <span class="hl">basic need</span>.<br>Shared machines are <span class="hl-r">overloaded</span>.</h2>
+    <div class="row" style="margin-top:22px">
+      <div class="card grow pop d2"><svg class="icon ico-washer" viewBox="0 0 48 48"></svg><h3>Too few machines</h3><p>One washer and dryer for a whole floor. Everyone wants them on the same evening.</p></div>
+      <div class="card grow pop d3"><svg class="icon" viewBox="0 0 48 48"><circle cx="24" cy="26" r="17" fill="#1899d6"/><circle cx="24" cy="24" r="17" fill="#1cb0f6"/><circle cx="24" cy="24" r="12" fill="#fff"/><path d="M24 16v8l6 4" stroke="#3c3c3c" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg><h3>People are busy</h3><p>Classes, shifts, commutes. Nobody has time to keep walking downstairs to check.</p></div>
+      <div class="card grow pop d4"><svg class="icon" viewBox="0 0 48 48"><path d="M8 20h32l-4 20a4 4 0 0 1-4 3H16a4 4 0 0 1-4-3Z" fill="#ffb020"/><ellipse cx="17" cy="17" rx="9" ry="5" fill="#84d8ff"/><ellipse cx="30" cy="16" rx="9" ry="5.5" fill="#ff86d0"/><g fill="#5cc8ff"><path d="M16 44q2 4 0 6q-2-2 0-6z"/><path d="M28 44q2 4 0 6q-2-2 0-6z"/></g></svg><h3>Clothes need to get dry</h3><p>Wet laundry can't wait. A missed slot means damp clothes and a wasted day.</p></div>
+    </div>
+  </section>
+
+  <!-- 3 · Problem: what actually happens -->
+  <section class="slide" data-title="Problem 2">
+    <div class="kicker pop">The problem · 2</div>
+    <h2 class="pop d1">Sound familiar?</h2>
+    <div class="row" style="margin-top:14px;align-items:center">
+      <div class="grow" style="display:grid;gap:14px">
+        <div class="card pop d2" style="padding:16px 22px"><h3 style="margin:0">🚶 “I walked down… it's busy. Again.”</h3></div>
+        <div class="card pop d3" style="padding:16px 22px"><h3 style="margin:0">🧺 “Someone's wet clothes have been sitting there for 2 hours.”</h3></div>
+        <div class="card pop d4" style="padding:16px 22px"><h3 style="margin:0">😤 “I was next! Who just started it?”</h3></div>
+        <div class="card pop d5" style="padding:16px 22px"><h3 style="margin:0">💬 “Is anyone using the dryer??” — 14 unread in the group chat</h3></div>
+      </div>
+      <div class="phone pop d3" style="transform:rotate(3deg)"><div class="screen">
+        <div class="wa"><i>🏠</i>House group</div>
+        <div class="msgs">
+          <div class="b">anyone using the washer?</div>
+          <div class="b">whose clothes are in the dryer 😩</div>
+          <div class="b me">mine sorry!! coming</div>
+          <div class="b">i was waiting since 8pm</div>
+          <div class="b">can we make a schedule pls</div>
+          <div class="b me">🙃</div>
+        </div></div></div>
+    </div>
+  </section>
+
+  <!-- 4 · Problem: housing doesn't communicate, market gap -->
+  <section class="slide" data-title="Problem 3">
+    <div class="kicker pop">The problem · 3</div>
+    <h2 class="pop d1">Housing doesn't <span class="hl-r">communicate</span> —<br>and nothing on the market fixes it.</h2>
+    <div class="row" style="margin-top:20px">
+      <div class="card grow pop d2"><h3>🙈 No visibility</h3><p>Tenants can't see if a machine is free, who's using it, or when it'll be done.</p></div>
+      <div class="card grow pop d3"><h3>📞 Complaints land on the landlord</h3><p>Disputes, misuse and broken machines are found late, by angry tenants.</p></div>
+      <div class="card grow pop d4"><h3>🪙 Built for laundromats</h3><p>Most laundry tech is about payment — coins, cards, another app to download, machines to rewire. Free shared laundry has nothing.</p></div>
+    </div>
+    <div class="bottom pop d5" style="font-size:22px;font-weight:900;color:#555">Result: <span class="hl-r">wasted trips, wet clothes, bad vibes</span> — and a landlord who hears about it last.</div>
+  </section>
+
+  <!-- 5 · How might we -->
+  <section class="slide" data-title="How might we">
+    <div class="row" style="align-items:center;height:100%">
+      <div class="grow">
+        <div class="kicker pop">The question we asked</div>
+        <h1 class="pop d1" style="font-size:54px">How might we help <span class="hl">busy residents</span> share laundry machines <span class="hl-g">fairly</span> —</h1>
+        <p class="lead pop d2" style="font-size:28px;color:var(--ink);font-weight:900">so everyone gets clean, dry clothes<br>without waiting, checking or arguing?</p>
+        <div class="row pop d3" style="gap:12px;margin-top:28px;flex-wrap:wrap">
+          <span class="pill" style="background:var(--blue)">no walking down to check</span>
+          <span class="pill" style="background:var(--purple)">a fair, visible queue</span>
+          <span class="pill" style="background:var(--amber)">no clothes left behind</span>
+          <span class="pill" style="background:var(--green)">nothing new to install</span>
+        </div>
+      </div>
+      <div class="pop d2" style="width:300px;display:grid;place-items:center">
+        <svg viewBox="0 0 200 220" width="280" style="animation:bob 3s ease-in-out infinite">
+          <circle cx="100" cy="92" r="84" fill="#fff" stroke="#e5e5e5" stroke-width="5"/>
+          <circle cx="100" cy="88" r="84" fill="#dcf3ff"/>
+          <text x="100" y="128" text-anchor="middle" font-size="110" font-weight="900" fill="#1cb0f6" font-family="Nunito,sans-serif">?</text>
+          <g transform="translate(150 160)"><circle r="28" fill="#58a700"/><circle r="28" cy="-4" fill="#58cc02"/><path d="M-11-4l7 7 14-14" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · Solution -->
+  <section class="slide" data-title="Solution">
+    <div class="row" style="align-items:center;height:100%">
+      <div class="grow">
+        <div class="kicker pop">The solution</div>
+        <h1 class="pop d1">Meet <span class="hl">LaundryBot</span>.</h1>
+        <p class="lead pop d2">A stick-on tag for every machine + a WhatsApp bot.<br><b>Scan. Queue. Get pinged.</b> No app to download, no rewiring, no arguments.</p>
+        <div class="row pop d3" style="gap:10px;margin-top:26px;flex-wrap:wrap">
+          <span class="pill" style="background:var(--green)">FREE</span><span class="pill" style="background:var(--blue)">IN USE</span>
+          <span class="pill" style="background:var(--amber)">DONE — COLLECT</span><span class="pill" style="background:var(--purple)">NEXT PERSON</span>
+        </div>
+      </div>
+      <div class="phone pop d2"><div class="screen">
+        <div class="wa"><i>🧺</i>LaundryBot</div>
+        <div class="msgs">
+          <div class="b me">START WASHER</div>
+          <div class="b">📅 The washer is busy (Enric's clothes — done 21:55). You'd be #1, around 22:00. Press QUEUE again to book.</div>
+          <div class="b me">QUEUE</div>
+          <div class="b">📅 You're booked! I'll remind you 5 min before.</div>
+          <div class="b">🟣 Your turn, Kain! The washer is saved for you until 22:10.</div>
+        </div></div></div>
+    </div>
+  </section>
+
+  <!-- 6 · How it works -->
+  <section class="slide" data-title="How it works">
+    <div class="kicker pop">How it works</div>
+    <h2 class="pop d1">Four steps. Zero arguments.</h2>
+    <div class="row" style="margin-top:18px">
+      <div class="card grow pop d2"><div class="num">1</div><h3>Scan the tag</h3><p>Point the camera at the QR on the machine. WhatsApp opens — one tap to send.</p></div>
+      <div class="card grow pop d3"><div class="num">2</div><h3>Use it or book it</h3><p>Free? It's yours. Busy? See your expected time and book a spot.</p></div>
+      <div class="card grow pop d4"><div class="num">3</div><h3>Chill in your room</h3><p>Reminders 5 min before and when it's your turn. No more checking.</p></div>
+      <div class="card grow pop d5"><div class="num">4</div><h3>Collect &amp; hand over</h3><p>Reply DONE — the next person is pinged. Washer → dryer, same load.</p></div>
+    </div>
+    <p class="note bottom pop d5">Works in English and Vietnamese: “@bot ai đang giặt đồ?” → who's washing, who's next, when it's free.</p>
+  </section>
+
+  <!-- 7 · The tag -->
+  <section class="slide" data-title="The tag">
+    <div class="kicker pop">The hardware</div>
+    <h2 class="pop d1">A tag that sticks on <span class="hl">any</span> machine.</h2>
+    <div class="row" style="align-items:center;margin-top:10px">
+      <div class="pop d2" style="background:#ece7dd;border-radius:26px;padding:22px;box-shadow:0 8px 0 #cfc8bb;display:flex;gap:18px;align-items:center">
+        <div class="lcd"><pre>WASHER: IN USE
+Enric   done 21:35
+████······  12 min
+Next: Kain ~21:40</pre></div>
+        <div style="background:#fff;border-radius:12px;padding:10px;text-align:center"><svg width="92" height="92" viewBox="0 0 21 21" id="qr"></svg><div style="font-weight:900;font-size:12px">SCAN ME</div></div>
+      </div>
+      <div class="grow" style="display:grid;gap:10px;font-size:19px;font-weight:800;color:#555">
+        <div class="pop d2">📟 20×4 LCD: status, who, when, who's next</div>
+        <div class="pop d3">🟢 RGB light bar: colour at a glance</div>
+        <div class="pop d3">🫨 Vibration sensor: knows when it really starts &amp; ends</div>
+        <div class="pop d4">🔊 Buzzer: alarm if someone skips the queue</div>
+        <div class="pop d4">🧲 Magnets + USB power: installs in a minute</div>
+        <div class="pop d5 note" style="font-size:15px">Hardware cost ≈ US$25–40 per machine (ESP32, LCD, sensor, buzzer, printed case)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · Smart features -->
+  <section class="slide" data-title="Features">
+    <div class="kicker pop">Built for real life</div>
+    <h2 class="pop d1">It handles the messy parts.</h2>
+    <div class="row" style="margin-top:14px;flex-wrap:wrap;gap:20px">
+      <div class="card pop d2" style="flex:1 1 30%"><h3>🚨 Forgot to scan?</h3><p>The tag feels the machine start, beeps, and the house is asked “whose is this?”. Reply MINE to claim it.</p></div>
+      <div class="card pop d3" style="flex:1 1 30%"><h3>🧺 Clothes left behind</h3><p>Two reminders, then the machine is freed. MOVED tells the owner their clothes are in the basket.</p></div>
+      <div class="card pop d4" style="flex:1 1 30%"><h3>⏱️ Honest wait times</h3><p>Expected times for everyone in line, updated when a cycle runs long.</p></div>
+      <div class="card pop d3" style="flex:1 1 30%"><h3>🔗 Washer → dryer</h3><p>Each load is tracked end to end — your clothes, not a random load.</p></div>
+      <div class="card pop d4" style="flex:1 1 30%"><h3>📋 Records</h3><p>Who used what, when; missed turns; clothes left too long. CSV export.</p></div>
+      <div class="card pop d5" style="flex:1 1 30%"><h3>💬 Natural language</h3><p>Ask like a human, in English or Vietnamese. No commands to learn.</p></div>
+    </div>
+  </section>
+
+  <!-- 9 · Demo -->
+  <section class="slide" data-title="Demo">
+    <div class="row" style="align-items:center;height:100%">
+      <div class="grow">
+        <div class="kicker pop">See it in action</div>
+        <h1 class="pop d1">Play a day<br>in the laundry room.</h1>
+        <p class="lead pop d2">Three housemates, one washer, one dryer. Pick their actions and watch them scan, queue, chill and collect — with the real bot answering.</p>
+        <div class="pop d3" style="margin-top:28px;display:flex;gap:14px;flex-wrap:wrap">
+          <a class="b3" href="/dev" target="_blank">▶ Try the live demo</a>
+          <a class="b3 blue" href="/device" target="_blank">📟 See the tag</a>
+        </div>
+        <p class="note pop d4" style="margin-top:14px">Demo runs on the LaundryBot dev server (npm run dev).</p>
+      </div>
+      <div class="pop d3" style="width:360px">
+        <svg viewBox="0 0 360 300" width="360">
+          <rect x="30" y="40" width="130" height="190" rx="18" fill="#fff" stroke="#e1e7ef" stroke-width="3"/>
+          <rect x="44" y="60" width="102" height="34" rx="5" fill="#b8d43a" stroke="#237a3c" stroke-width="5"/>
+          <circle cx="95" cy="160" r="46" fill="#dfe6ee"/><circle cx="95" cy="160" r="36" fill="#274060"/>
+          <g style="transform-origin:95px 160px;animation:wig 1.2s linear infinite"><ellipse cx="85" cy="150" rx="14" ry="8" fill="#ff4b4b"/><ellipse cx="104" cy="168" rx="14" ry="8" fill="#fff"/><ellipse cx="90" cy="172" rx="12" ry="7" fill="#ffe1e1"/></g>
+          <rect x="190" y="40" width="130" height="190" rx="14" fill="#fff8ef" stroke="#f3e1c8" stroke-width="3"/>
+          <rect x="204" y="60" width="102" height="34" rx="5" fill="#b8d43a" stroke="#237a3c" stroke-width="5"/>
+          <rect x="215" y="118" width="80" height="80" rx="20" fill="#4a3426" stroke="#d7b893" stroke-width="6"/>
+          <rect x="0" y="232" width="360" height="12" rx="6" fill="#e2ecf6"/>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · Scale -->
+  <section class="slide" data-title="Scale">
+    <div class="kicker pop">It scales</div>
+    <h2 class="pop d1">From one shared house<br>to a <span class="hl">500-unit tower</span>.</h2>
+    <div class="row" style="margin-top:18px;align-items:flex-end;gap:22px">
+      <div class="card grow pop d2" style="text-align:center"><div style="font-size:54px">🏠</div><h3>Shared house</h3><p>1 washer · 1 dryer</p></div>
+      <div class="card grow pop d3" style="text-align:center;padding-top:34px"><div style="font-size:64px">🏫</div><h3>Dorms</h3><p>A laundry room per block · one queue for “next free washer”</p></div>
+      <div class="card grow pop d4" style="text-align:center;padding-top:46px"><div style="font-size:74px">🏙️</div><h3>Condos &amp; co-living</h3><p>Many buildings · one WhatsApp number · one dashboard</p></div>
+    </div>
+    <p class="note bottom pop d5">Same tag, same bot. Each tag's QR carries its own machine ID; queues pool across machines in a room.</p>
+  </section>
+
+  <!-- 11 · Customer -->
+  <section class="slide" data-title="Customer">
+    <div class="kicker pop">Who we sell to</div>
+    <h2 class="pop d1">Not roommates. <span class="hl-g">Landlords &amp; operators.</span></h2>
+    <p class="lead pop d2">Condo management, student housing and dorm operators, co-living brands — anyone offering <b>complimentary shared laundry</b>.</p>
+    <div class="row" style="margin-top:22px">
+      <div class="card grow pop d3"><h3>🛡️ Less risk</h3><p>Misuse and queue-jumping are caught by the sensor, not by complaints. Idle or broken machines show up in the data.</p></div>
+      <div class="card grow pop d4"><h3>🙋 Tenants self-serve</h3><p>Residents manage their own loads, queues and reminders. Fewer calls to the front desk.</p></div>
+      <div class="card grow pop d5"><h3>📊 Usage insight</h3><p>Peak hours, loads per machine, time left uncollected — plan capacity with real numbers.</p></div>
+    </div>
+  </section>
+
+  <!-- 12 · Model + CTA -->
+  <section class="slide" data-title="Model">
+    <div class="kicker pop">Business model <span class="note">(proposed)</span></div>
+    <h2 class="pop d1">Simple to buy. Simple to roll out.</h2>
+    <div class="row" style="margin-top:18px">
+      <div class="card grow pop d2"><h3>📦 Hardware kit</h3><p>One tag per machine, installed in minutes. No plumbing, no electrician.</p></div>
+      <div class="card grow pop d3"><h3>🔁 Per-machine subscription</h3><p>Monthly fee per machine for the bot, queues, alerts and the manager dashboard.</p></div>
+      <div class="card grow pop d4"><h3>🚀 Pilot first</h3><p>Start with one building's laundry room, measure fewer complaints and better usage, then expand.</p></div>
+    </div>
+    <div class="bottom pop d5" style="display:flex;align-items:center;gap:24px">
+      <div style="font-size:34px;font-weight:900">Laundry, <span class="hl">sorted</span>. 🧺</div>
+      <a class="b3" href="/dev" target="_blank">▶ Try the demo</a>
+    </div>
+  </section>
+
+  <button class="arrow prev" id="prev" aria-label="Previous slide">←</button>
+  <button class="arrow next" id="next" aria-label="Next slide">→</button>
+  <div class="nav"><div class="dots" id="dots"></div></div>
+</div></div>
+
+<script>
+/* shared icon */
+const WASHER = `<rect x="8" y="9" width="32" height="35" rx="8" fill="#b9c6d6"/><rect x="8" y="6" width="32" height="35" rx="8" fill="#fff" stroke="#dbe3ec" stroke-width="1.5"/><path d="M8 14V13a7 7 0 0 1 7-7h18a7 7 0 0 1 7 7v1Z" fill="#e5ebf2"/><circle cx="14" cy="10.4" r="1.8" fill="#1cb0f6"/><circle cx="19.5" cy="10.4" r="1.8" fill="#ffc800"/><circle cx="24" cy="26" r="10.5" fill="#9fb0c3"/><circle cx="24" cy="26" r="8" fill="#84d8ff"/><path d="M16 26.5Q20 23.5 24 26.5T32 26.5A8 8 0 0 1 16 26.5Z" fill="#1cb0f6"/><circle cx="20.5" cy="22.5" r="2.2" fill="#fff" opacity=".85"/>`;
+document.querySelectorAll('.ico-washer').forEach(s => s.innerHTML = WASHER);
+/* a decorative QR for the tag slide */
+(function(){ let a = 7; const r = () => (a = (a*1103515245 + 12345) & 0x7fffffff) / 0x7fffffff; let d = '';
+  const res = (x,y) => (x<8&&y<8)||(x>12&&y<8)||(x<8&&y>12);
+  for(let y=0;y<21;y++) for(let x=0;x<21;x++) if(!res(x,y) && r() < .47) d += `M${x} ${y}h1v1h-1z`;
+  const f = (x,y) => `M${x} ${y}h7v7h-7zM${x+1} ${y+1}v5h5v-5zM${x+2} ${y+2}h3v3h-3z`;
+  document.getElementById('qr').innerHTML = `<path d="${d}${f(0,0)}${f(14,0)}${f(0,14)}" fill="#111" fill-rule="evenodd"/>`; })();
+
+/* navigation */
+const slides = [...document.querySelectorAll('.slide')], dots = document.getElementById('dots');
+let cur = 0;
+slides.forEach((s,i) => { const d = document.createElement('i'); d.title = s.dataset.title; d.onclick = () => go(i); dots.appendChild(d); });
+function go(i){
+  i = Math.max(0, Math.min(slides.length - 1, i));
+  slides.forEach((s,k) => { s.classList.toggle('on', k === i); s.classList.toggle('left', k < i); });
+  [...dots.children].forEach((d,k) => d.classList.toggle('on', k === i));
+  document.getElementById('count').textContent = `${i + 1} / ${slides.length}`;
+  cur = i; history.replaceState(null, '', '#' + (i + 1));
+}
+document.getElementById('prev').onclick = () => go(cur - 1);
+document.getElementById('next').onclick = () => go(cur + 1);
+addEventListener('keydown', e => {
+  if(['ArrowRight','PageDown',' '].includes(e.key)){ e.preventDefault(); go(cur + 1); }
+  if(['ArrowLeft','PageUp'].includes(e.key)){ e.preventDefault(); go(cur - 1); }
+  if(e.key === 'Home') go(0); if(e.key === 'End') go(slides.length - 1);
+});
+let tx = null;
+addEventListener('touchstart', e => tx = e.touches[0].clientX, { passive:true });
+addEventListener('touchend', e => { if(tx === null) return; const dx = e.changedTouches[0].clientX - tx; if(Math.abs(dx) > 50) go(cur + (dx < 0 ? 1 : -1)); tx = null; });
+
+/* fit the 1280×720 stage to any window */
+function fit(){ const s = Math.min(innerWidth / 1300, innerHeight / 740); document.getElementById('stage').style.transform = `scale(${s})`; }
+addEventListener('resize', fit); fit();
+go(Math.max(0, (parseInt(location.hash.slice(1)) || 1) - 1));
+</script>
+</body>
+</html>
