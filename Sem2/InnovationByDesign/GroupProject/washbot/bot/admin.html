@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Laundry Records</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#3c3c3c; --muted:#8a8a8a; --line:#e5e5e5; --blue:#1cb0f6; --blue-d:#1899d6;
+         --good:#58a700; --good-bg:#e3fbd0; --warn:#b35c00; --warn-bg:#fff0d6; --bad:#d33131; --bad-bg:#ffe1e1; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Nunito,system-ui,sans-serif;background:#f3f8fd;color:var(--ink);padding:18px}
+  main{max-width:1180px;margin:0 auto;display:grid;gap:16px}
+  button,select,input{font-family:inherit}
+  .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .top h1{margin:0;font-size:24px;font-weight:900}
+  .top p{margin:2px 0 0;color:var(--muted);font-weight:700;font-size:13.5px}
+  .top .grow{margin-right:auto}
+  .card{background:#fff;border:2px solid var(--line);border-radius:20px;box-shadow:0 5px 0 var(--line)}
+  .b3{border:0;border-radius:14px;padding:0 16px;height:42px;font-weight:900;font-size:13.5px;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:var(--blue);box-shadow:0 4px 0 var(--blue-d);cursor:pointer;display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+  .b3:active{transform:translateY(4px);box-shadow:none}
+
+  .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:12px 14px}
+  .seg{display:flex;border:2px solid var(--line);border-radius:12px;overflow:hidden}
+  .seg button{border:0;background:#fff;padding:0 12px;height:36px;font-weight:800;font-size:13px;color:#777;cursor:pointer}
+  .seg button+button{border-left:2px solid var(--line)}
+  .seg button.on{background:#dcf3ff;color:var(--blue-d)}
+  .filters select,.filters input{height:40px;border:2px solid var(--line);border-radius:12px;padding:0 10px;font-weight:700;font-size:13.5px;color:var(--ink);background:#fff}
+  .filters label{font-size:12px;font-weight:800;color:var(--muted);display:flex;align-items:center;gap:6px}
+
+  .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+  .stat{padding:14px 16px}
+  .stat small{display:block;font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .stat b{display:block;font-size:34px;font-weight:900;line-height:1.1;margin-top:4px;font-variant-numeric:tabular-nums}
+  .stat span{font-size:13px;font-weight:700;color:var(--muted)}
+
+  .charts{display:grid;grid-template-columns:1fr 1.4fr;gap:14px}
+  .chart{padding:14px 16px}
+  .chart h2{margin:0 0 10px;font-size:15px;font-weight:900}
+  .hbar{display:grid;grid-template-columns:70px 1fr 30px;align-items:center;gap:8px;margin:6px 0;font-weight:800;font-size:13px}
+  .hbar .track{height:14px;position:relative}
+  .hbar .fill{height:100%;background:var(--blue);border-radius:0 4px 4px 0;min-width:2px}
+  .hbar .n{font-variant-numeric:tabular-nums;color:var(--ink)}
+  .cols{display:flex;align-items:flex-end;gap:2px;height:130px;border-bottom:1px solid var(--line);padding-top:6px}
+  .cols div{flex:1;background:var(--blue);border-radius:4px 4px 0 0;min-height:0;position:relative}
+  .cols div:hover,.hbar:hover .fill{filter:brightness(.9)}
+  .xlab{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--muted);margin-top:4px}
+  .tip{position:fixed;pointer-events:none;background:#3c3c3c;color:#fff;font-size:12.5px;font-weight:800;padding:6px 9px;border-radius:9px;opacity:0;transition:opacity .1s;z-index:9}
+  .none{color:var(--muted);font-weight:700;font-size:13px;padding:8px 0}
+
+  .tablecard{overflow:hidden}
+  .tablecard .head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px}
+  .tablecard h2{margin:0;font-size:15px;font-weight:900}
+  .scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:900;padding:8px 12px;border-top:2px solid var(--line);border-bottom:2px solid var(--line);background:#fafafa;white-space:nowrap}
+  td{padding:9px 12px;border-bottom:1px solid #f0f0f0;font-weight:700;white-space:nowrap}
+  td.num{font-variant-numeric:tabular-nums}
+  tr:hover td{background:#f7fbff}
+  .who{display:flex;align-items:center;gap:8px}
+  .dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:12px;font-weight:900;background:#afafaf}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:99px;font-size:12px;font-weight:900}
+  .badge.good{background:var(--good-bg);color:var(--good)}
+  .badge.warn{background:var(--warn-bg);color:var(--warn)}
+  .badge.bad{background:var(--bad-bg);color:var(--bad)}
+  .badge.grey{background:#f0f0f0;color:#777}
+  .machine{display:inline-flex;align-items:center;gap:6px}
+  .mdot{width:10px;height:10px;border-radius:3px}
+
+  .locked{max-width:380px;margin:12vh auto;padding:22px;text-align:center}
+  .locked input{width:100%;height:44px;border:2px solid var(--line);border-radius:12px;padding:0 12px;font:700 15px Nunito,sans-serif;margin:12px 0}
+  .privacy{font-size:12.5px;color:var(--muted);font-weight:700;text-align:center}
+
+  @media (max-width:1000px){ .stats{grid-template-columns:repeat(3,1fr)} }
+  @media (max-width:860px){ .stats{grid-template-columns:1fr 1fr} .charts{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<main id="app" hidden>
+  <div class="top">
+    <div class="grow"><h1>📋 Laundry records</h1><p>Who used which machine, and when</p></div>
+    <a class="b3" id="csv" href="#">⬇ Export CSV</a>
+  </div>
+
+  <div class="card filters">
+    <div class="seg" id="range">
+      <button data-d="1">Today</button><button data-d="7" class="on">7 days</button><button data-d="30">30 days</button><button data-d="0">All</button>
+    </div>
+    <label>From <input type="date" id="from"></label>
+    <label>To <input type="date" id="to"></label>
+    <select id="machine"><option value="">All machines</option></select>
+    <select id="person"><option value="">Everyone</option></select>
+  </div>
+
+  <div class="stats">
+    <div class="card stat"><small>Loads</small><b id="sLoads">0</b><span id="sLoadsSub"></span></div>
+    <div class="card stat"><small>Avg time to collect</small><b id="sCollect">–</b><span>after the cycle ends</span></div>
+    <div class="card stat"><small>Clothes left too long</small><b id="sAuto">0</b><span>auto-freed or moved out by others</span></div>
+    <div class="card stat"><small>Missed turns</small><b id="sMissed">0</b><span>didn't scan in time</span></div>
+    <div class="card stat"><small>Forgot to scan</small><b id="sForgot">0</b><span id="sForgotSub">tag alarm went off</span></div>
+  </div>
+
+  <div class="charts">
+    <div class="card chart"><h2>Loads per person</h2><div id="perPerson"></div></div>
+    <div class="card chart"><h2>Busiest hours (loads started)</h2><div class="cols" id="hours"></div>
+      <div class="xlab"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span></div></div>
+  </div>
+
+  <div class="card tablecard">
+    <div class="head"><h2 id="tableTitle">All activity</h2></div>
+    <div class="scroll"><table>
+      <thead><tr><th>Date</th><th>Machine</th><th>Person</th><th>Phone</th><th>Waited</th><th>Started</th><th>Finished</th><th>Collected</th><th>Took to collect</th><th>Result</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+  </div>
+  <p class="privacy">Residents are told in the bot's help message that their name and machine times are recorded. Records older than the retention period are deleted automatically.</p>
+</main>
+
+<div class="card locked" id="locked" hidden>
+  <h1 style="margin:0;font-size:20px">🔒 Manager access</h1>
+  <p style="color:var(--muted);font-weight:700;margin:6px 0 0">Enter the admin key to see laundry records.</p>
+  <form id="keyForm"><input id="keyInput" type="password" placeholder="Admin key" autocomplete="current-password"><button class="b3" style="width:100%;justify-content:center">Open records</button></form>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const COLORS = ['#ff4b4b','#ce82ff','#1cb0f6','#ff9600','#58cc02','#ff86d0'];   // avatar dots only
+let key = ''; try { key = sessionStorage.getItem('washbot-admin') || new URLSearchParams(location.search).get('key') || ''; } catch {}
+let data = null;
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ymd = d => d.toLocaleDateString('en-CA');
+const fmtT = ms => ms ? new Date(ms).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:data.timezone}) : '–';
+const fmtD = ms => new Date(ms).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:data.timezone});
+const mins = (a,b) => a && b ? Math.round((b-a)/60000) : null;
+const mask = p => p ? '•••• ' + String(p).slice(-4) : '';
+const hourOf = ms => Number(new Date(ms).toLocaleString('en-GB',{hour:'2-digit',hour12:false,timeZone:data.timezone})) % 24;
+
+function query(){
+  const q = new URLSearchParams();
+  if($('from').value) q.set('from', $('from').value);
+  if($('to').value) q.set('to', $('to').value);
+  if($('machine').value) q.set('machine', $('machine').value);
+  if($('person').value) q.set('name', $('person').value);
+  return q;
+}
+async function load(){
+  const q = query();
+  const res = await fetch('/api/history?' + q, { headers:{ 'x-admin-key': key } });
+  if(res.status === 401){ $('app').hidden = true; $('locked').hidden = false; return; }
+  data = await res.json();
+  $('locked').hidden = true; $('app').hidden = false;
+  if(key) q.set('key', key);
+  $('csv').href = '/api/history.csv?' + q;
+  render();
+}
+
+let peopleSeen = new Set();
+function render(){
+  const recs = data.records, washes = recs.filter(r=>r.type==='wash');
+  // filter dropdowns (keep options once seen)
+  const ms = $('machine');
+  if(ms.options.length === 1) Object.entries(data.machines).forEach(([id,l])=> ms.add(new Option(l, id)));
+  recs.forEach(r=>{ if(r.type!=='unclaimed' && !peopleSeen.has(r.name)){ peopleSeen.add(r.name); $('person').add(new Option(r.name, r.name)); } });
+
+  // stats
+  $('sLoads').textContent = washes.length;
+  const byM = Object.keys(data.machines).map(id=>`${washes.filter(r=>r.machine===id).length} ${data.machines[id].toLowerCase()}`).join(' · ');
+  $('sLoadsSub').textContent = byM;
+  const delays = washes.map(r=>mins(r.finishedAt, r.collectedAt)).filter(v=>v!==null);
+  $('sCollect').textContent = delays.length ? Math.round(delays.reduce((a,b)=>a+b,0)/delays.length) + ' min' : '–';
+  $('sAuto').textContent = washes.filter(r=>r.outcome==='auto-freed' || r.outcome==='moved').length;
+  $('sMissed').textContent = recs.filter(r=>r.type==='turn' && r.outcome==='missed').length;
+  const owned = washes.filter(r=>r.forgotScan).length, nobody = recs.filter(r=>r.type==='unclaimed').length;
+  $('sForgot').textContent = owned + nobody;
+  $('sForgotSub').textContent = `${owned} owned up · ${nobody} never claimed`;
+
+  // loads per person (single series → one colour, value labels at the bar end)
+  const counts = {}; washes.forEach(r=> counts[r.name] = (counts[r.name]||0) + 1);
+  const ranked = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+  const max = Math.max(1, ...ranked.map(r=>r[1]));
+  $('perPerson').innerHTML = ranked.length ? ranked.map(([n,c])=>`<div class="hbar" data-tip="${esc(n)}: ${c} load${c>1?'s':''}"><span>${esc(n)}</span><div class="track"><div class="fill" style="width:${c/max*100}%"></div></div><span class="n">${c}</span></div>`).join('') : '<div class="none">No loads in this period.</div>';
+
+  // busiest hours
+  const hours = Array(24).fill(0); washes.forEach(r=> hours[hourOf(r.startedAt)]++);
+  const hmax = Math.max(1, ...hours);
+  $('hours').innerHTML = hours.map((c,h)=>`<div style="height:${c/hmax*100}%" data-tip="${String(h).padStart(2,'0')}:00–${String(h).padStart(2,'0')}:59 · ${c} load${c===1?'':'s'}"></div>`).join('');
+
+  // table
+  $('tableTitle').textContent = `All activity (${recs.length})`;
+  const names = [...peopleSeen];
+  const color = n => COLORS[names.indexOf(n) % COLORS.length];
+  const OUT = {
+    'collected':  ['good','✅ Collected'],
+    'auto-freed': ['warn','⏰ Left too long'],
+    'missed':     ['bad','🚫 Missed turn'],
+    'gave-up':    ['grey','↩️ Gave up turn'],
+    'unclaimed':  ['bad','❓ Nobody claimed'],
+  };
+  $('rows').innerHTML = recs.length ? recs.map(r=>{
+    const [cls,txt] = r.type==='moved' ? ['grey', `🧺 Moved ${esc(r.owner)}'s clothes`]
+                    : r.outcome==='moved' ? ['warn', `🧺 Moved out by ${esc(r.movedBy)}`]
+                    : OUT[r.outcome] || ['grey', r.outcome];
+    const mc = r.machine==='D1' ? '#ff9600' : '#1cb0f6';
+    const wait = mins(r.queuedAt, r.startedAt), took = mins(r.finishedAt, r.collectedAt);
+    const isWash = r.type==='wash', hasTimes = isWash || r.type==='unclaimed';
+    return `<tr>
+      <td>${fmtD(r.startedAt || r.at)}</td>
+      <td><span class="machine"><i class="mdot" style="background:${mc}"></i>${esc(data.machines[r.machine] || r.machine)}</span></td>
+      <td><span class="who"><span class="dot" style="background:${r.type==='unclaimed' ? '#afafaf' : color(r.name)}">${r.type==='unclaimed' ? '?' : esc(r.name[0])}</span>${esc(r.name)}</span></td>
+      <td class="num">${esc(mask(r.phone))}</td>
+      <td class="num">${isWash ? (wait!==null ? wait+' min' : '–') : '–'}</td>
+      <td class="num">${fmtT(r.startedAt || r.at)}</td>
+      <td class="num">${hasTimes ? fmtT(r.finishedAt) : '–'}</td>
+      <td class="num">${isWash ? fmtT(r.collectedAt) : '–'}</td>
+      <td class="num">${isWash && took!==null ? took+' min' : '–'}</td>
+      <td><span class="badge ${cls}">${txt}</span>${r.forgotScan ? ` <span class="badge warn" title="${esc(r.note || 'Started before scanning; claimed it after the alarm')}">🙈 Forgot to scan</span>` : ''}</td></tr>`;
+  }).join('') : `<tr><td colspan="10" class="none" style="text-align:center;padding:24px">No records yet — they appear here as people use the machines.</td></tr>`;
+}
+
+// hover tooltips for the charts
+const tip = $('tip');
+document.addEventListener('mousemove', e=>{
+  const t = e.target.closest('[data-tip]');
+  if(!t){ tip.style.opacity = 0; return; }
+  tip.textContent = t.dataset.tip; tip.style.opacity = 1;
+  tip.style.left = Math.min(innerWidth - tip.offsetWidth - 8, e.clientX + 12) + 'px'; tip.style.top = (e.clientY - 34) + 'px';
+});
+
+// filters
+function setRange(days){
+  document.querySelectorAll('#range button').forEach(b=> b.classList.toggle('on', Number(b.dataset.d)===days));
+  const today = new Date();
+  $('to').value = '';                                   // presets are open-ended so nothing new is hidden
+  $('from').value = days ? ymd(new Date(today - (days-1)*86400000)) : '';
+  load();
+}
+document.querySelectorAll('#range button').forEach(b=> b.onclick = ()=> setRange(Number(b.dataset.d)));
+['from','to'].forEach(id=> $(id).onchange = ()=>{ document.querySelectorAll('#range button').forEach(b=>b.classList.remove('on')); load(); });
+['machine','person'].forEach(id=> $(id).onchange = load);
+$('keyForm').onsubmit = e=>{ e.preventDefault(); key = $('keyInput').value.trim(); try { sessionStorage.setItem('washbot-admin', key); } catch {} load(); };
+
+setRange(7);
+setInterval(load, 10000);
+</script>
+</body>
+</html>
