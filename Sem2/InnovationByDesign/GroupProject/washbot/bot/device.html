@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tag Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<style>
+  :root{ --ink:#3c3c3c; --muted:#8a8a8a; --line:#e5e5e5; --blue:#1cb0f6; --blue-d:#1899d6; }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Nunito,system-ui,sans-serif;background:radial-gradient(circle at 50% 0,#ffffff,#e9f1f9 70%);color:var(--ink);min-height:100vh;padding:18px}
+  main{max-width:1180px;margin:0 auto;display:grid;gap:22px}
+  .top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .top h1{margin:0;font-size:22px;font-weight:900}
+  .top p{margin:2px 0 0;color:var(--muted);font-weight:700;font-size:13.5px}
+  .top .grow{margin-right:auto}
+  .b3{--sh:var(--blue-d);border:0;border-radius:14px;padding:0 16px;height:42px;font:900 13.5px Nunito,sans-serif;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:var(--blue);box-shadow:0 4px 0 var(--sh);cursor:pointer;display:inline-flex;align-items:center;gap:6px;text-decoration:none;
+      transition:transform .18s cubic-bezier(.3,1.8,.5,1),box-shadow .18s cubic-bezier(.3,1.8,.5,1)}
+  .b3:hover{transform:translateY(-3px);box-shadow:0 7px 0 var(--sh)}
+  .b3:active{transform:translateY(4px);box-shadow:0 0 0 var(--sh);transition-duration:.06s}
+  .b3.white{--sh:var(--line);background:#fff;color:#777;border:2px solid var(--line)}
+  .b3.red{--sh:#d33131;background:#ff4b4b}
+  .seg{display:flex;border:2px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+  .seg button{border:0;background:#fff;padding:0 12px;height:38px;font:800 13px Nunito,sans-serif;color:#777;cursor:pointer}
+  .seg button+button{border-left:2px solid var(--line)}
+  .seg button.on{background:#dcf3ff;color:var(--blue-d)}
+
+  .bench{display:grid;gap:34px;justify-items:center;padding:6px 0}
+  .unit{display:grid;justify-items:center;gap:12px}
+  .unit.focus .case{animation:focus 1.2s ease-out 2}
+  @keyframes focus{0%{box-shadow:0 0 0 0 rgba(28,176,246,.7),0 10px 0 #c9c4b8}100%{box-shadow:0 0 0 26px rgba(28,176,246,0),0 10px 0 #c9c4b8}}
+  .unit h2{margin:0;font-size:14px;font-weight:900;letter-spacing:.1em;color:var(--muted)}
+
+  /* ---------- 3D-printed enclosure: LCD module + QR sticker + RGB light bar ---------- */
+  .case{--s:.85;position:relative;display:flex;align-items:center;gap:calc(26px*var(--s));padding:calc(30px*var(--s)) calc(34px*var(--s)) calc(46px*var(--s));
+    border-radius:calc(30px*var(--s));
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.035) 0 1px, transparent 1px 3px), linear-gradient(160deg,#fbfaf7,#e9e6df 60%,#dcd8cf);
+    box-shadow:0 calc(10px*var(--s)) 0 #c9c4b8, 0 calc(24px*var(--s)) calc(40px*var(--s)) rgba(0,0,0,.18), inset 0 2px 0 rgba(255,255,255,.9)}
+  .case.shake{animation:shake .12s linear infinite}
+  @keyframes shake{25%{transform:translate(1px,-1px) rotate(.2deg)}75%{transform:translate(-1px,1px) rotate(-.2deg)}}
+  .mag{position:absolute;top:calc(-9px*var(--s));width:calc(56px*var(--s));height:calc(14px*var(--s));border-radius:calc(6px*var(--s)) calc(6px*var(--s)) 0 0;background:linear-gradient(#9aa3b2,#6b7384)}
+  .mag.l{left:calc(90px*var(--s))} .mag.r{right:calc(90px*var(--s))}
+
+  /* the LCD module itself (like the Fordata FDCC2004) */
+  .module{position:relative;padding:calc(26px*var(--s)) calc(30px*var(--s)) calc(22px*var(--s));border-radius:calc(8px*var(--s));
+    background:linear-gradient(160deg,#2f8f47,#1e6e36);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25), 0 2px 0 rgba(0,0,0,.15)}
+  .module .hole{position:absolute;width:calc(22px*var(--s));height:calc(22px*var(--s));border-radius:50%;background:#f4f2ee;box-shadow:0 0 0 calc(3px*var(--s)) #c9cfc2, inset 0 1px 2px rgba(0,0,0,.3)}
+  .hole.tl{left:calc(6px*var(--s));top:calc(6px*var(--s))} .hole.tr{right:calc(6px*var(--s));top:calc(6px*var(--s))}
+  .hole.bl{left:calc(6px*var(--s));bottom:calc(6px*var(--s))} .hole.br{right:calc(6px*var(--s));bottom:calc(6px*var(--s))}
+  .pins{position:absolute;left:calc(64px*var(--s));top:calc(4px*var(--s));display:flex;gap:calc(5px*var(--s))}
+  .pins i{width:calc(12px*var(--s));height:calc(12px*var(--s));border-radius:50%;background:radial-gradient(circle,#2b2b2b 30%,#d6b25a 35%,#a8842c 70%)}
+  .frame{background:#0d0d0d;border-radius:calc(4px*var(--s));padding:calc(16px*var(--s)) calc(14px*var(--s));box-shadow:inset 0 2px 6px rgba(0,0,0,.8)}
+  .frame::before,.frame::after{content:"";display:block;height:calc(3px*var(--s));background:#2a2a2a;margin:0 0 calc(10px*var(--s))}
+  .frame::after{margin:calc(10px*var(--s)) 0 0}
+  canvas.lcd{display:block;width:calc(634px*var(--s));height:calc(223px*var(--s))}
+
+  /* printed QR sticker */
+  .sticker{background:#fff;border-radius:calc(14px*var(--s));padding:calc(12px*var(--s)) calc(12px*var(--s)) calc(10px*var(--s));box-shadow:0 1px 0 rgba(0,0,0,.08), inset 0 0 0 1px #eee;text-align:center}
+  .sticker canvas{display:block;width:calc(168px*var(--s));height:calc(168px*var(--s));image-rendering:pixelated}
+  .sticker b{display:block;font:900 calc(15px*var(--s)) Nunito,sans-serif;letter-spacing:.08em;margin-top:calc(6px*var(--s))}
+  .sticker small{display:block;font:800 calc(11px*var(--s)) Nunito,sans-serif;color:#25a244}
+
+  /* RGB light bar = the colour indicator */
+  .bar{position:absolute;left:calc(34px*var(--s));bottom:calc(16px*var(--s));width:calc(560px*var(--s));height:calc(12px*var(--s));border-radius:99px;background:#16a34a;box-shadow:0 0 calc(16px*var(--s)) currentColor;color:#16a34a}
+  .vib{position:absolute;right:calc(96px*var(--s));bottom:calc(14px*var(--s));font:900 calc(10px*var(--s)) Nunito,sans-serif;color:#b9b4aa;letter-spacing:.08em}
+  .vib.on{color:#ff9600}
+  .grille{position:absolute;right:calc(26px*var(--s));bottom:calc(12px*var(--s));display:grid;grid-template-columns:repeat(6,calc(6px*var(--s)));gap:calc(3px*var(--s))}
+  .grille i{width:calc(6px*var(--s));height:calc(6px*var(--s));border-radius:50%;background:#bdb8ad;box-shadow:inset 0 1px 1px rgba(0,0,0,.35)}
+  .case.beep .grille i{animation:pulse .25s ease-in-out infinite alternate}
+  @keyframes pulse{to{background:#ff4b4b;transform:scale(1.3)}}
+  .waves{position:absolute;right:calc(-38px*var(--s));bottom:0;font-size:calc(28px*var(--s));opacity:0}
+  .case.beep .waves{opacity:1;animation:ring .3s ease-in-out infinite alternate}
+  @keyframes ring{from{transform:rotate(-10deg)}to{transform:rotate(10deg) scale(1.1)}}
+
+  .controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .spec{font-size:12.5px;font-weight:700;color:var(--muted);text-align:center;line-height:1.5}
+  .spec code{font:800 11.5px ui-monospace,Menlo,monospace;background:#fff;border:1px solid var(--line);border-radius:6px;padding:1px 5px;color:#555}
+  .card{background:#fff;border:2px solid var(--line);border-radius:20px;box-shadow:0 5px 0 var(--line);padding:14px 18px;font-size:13.5px;font-weight:700;color:#555;line-height:1.55}
+  .card b{color:var(--ink)}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div class="grow"><h1>📟 Tag simulator</h1><p>20×4 character LCD (Fordata FDCC2004 style) · printed QR sticker · RGB light bar — live from the bot</p></div>
+    <div class="seg" id="size"><button data-s="0.55">Real size</button><button data-s="0.85" class="on">Large</button></div>
+    <button class="b3 white" id="soundBtn">🔊 Sound on</button>
+    <a class="b3 white" href="/dev">🏠 House tester</a>
+  </div>
+
+  <div class="bench" id="bench"></div>
+
+  <div class="card">
+    <b>Why a sticker?</b> A character LCD can only show letters, so the QR code is <b>printed</b> on the case. Each machine's QR never changes (it opens WhatsApp with <b>START WASHER</b> / <b>START DRYER</b>), so a sticker works perfectly, and it's real: scan it with your phone camera.
+    The <b>RGB light bar</b> shows the colour (green free, blue in use, amber done, purple next, red alarm). The LCD prints the 4 lines the bot sends in <code>lcd</code>, exactly what the ESP32 will print.
+    <b>Shake</b> pretends someone pressed Start without scanning: after 5 seconds the backlight blinks, the bar flashes red and the buzzer beeps.
+  </div>
+</main>
+
+<script>
+/* ---------- HD44780 5×7 character ROM (ASCII 0x20–0x7E), 5 column bytes each, bit 0 = top row ---------- */
+const ROM = [
+  '0000000000', '00005f0000', '0007000700', '147f147f14', '242a7f2a12', '2313086462', '3649552250', '0005030000',
+  '001c224100', '0041221c00', '14083e0814', '08083e0808', '0050300000', '0808080808', '0060600000', '2010080402',
+  '3e5149453e', '00427f4000', '4261514946', '2141454b31', '1814127f10', '2745454539', '3c4a494930', '0171090503',
+  '3649494936', '064949291e', '0036360000', '0056360000', '0814224100', '1414141414', '0041221408', '0201510906',
+  '324979413e', '7e1111117e', '7f49494936', '3e41414122', '7f4141221c', '7f49494941', '7f09090901', '3e4149497a',
+  '7f0808087f', '00417f4100', '2040413f01', '7f08142241', '7f40404040', '7f020c027f', '7f0408107f', '3e4141413e',
+  '7f09090906', '3e4151215e', '7f09192946', '4649494931', '01017f0101', '3f4040403f', '1f2040201f', '3f4038403f',
+  '6314081463', '0708700807', '6151494543', '007f414100', '0204081020', '0041417f00', '0402010204', '4040404040',
+  '0001020400', '2054545478', '7f48444438', '3844444420', '384444487f', '3854545418', '087e090102', '0c5252523e',
+  '7f08040478', '00447d4000', '2040443d00', '7f10284400', '00417f4000', '7c04180478', '7c08040478', '3844444438',
+  '7c14141408', '081414187c', '7c08040408', '4854545420', '043f444020', '3c4040207c', '1c2040201c', '3c4030403c',
+  '4428102844', '0c5050503c', '4464544c44', '0008364100', '00007f0000', '0041360800', '1008081008'
+];   // 95 glyphs, 0x20 ' ' … 0x7E '~'
+function glyph(ch){
+  const code = ch.charCodeAt(0);
+  if(code === 0xff) return [0xff,0xff,0xff,0xff,0xff];          // █ full block
+  if(code === 0xa5) return [0x00,0x00,0x18,0x00,0x00];          // ･ middle dot
+  const i = code - 0x20;
+  if(i < 0 || i > 94) return [0,0,0,0,0];
+  return [0,1,2,3,4].map(k=>parseInt(ROM[i].substr(k*2, 2), 16));
+}
+
+/* ---------- draw the LCD: 20 columns × 4 rows, 5×8 dots per character ---------- */
+const DOT = 4, GAP = 1, CH_GAP = 6, ROW_GAP = 9, M = 20;
+const PITCH_X = 5*(DOT+GAP) - GAP + CH_GAP, PITCH_Y = 8*(DOT+GAP) - GAP + ROW_GAP;
+function drawLCD(ctx, lines, backlight){
+  const w = ctx.canvas.width, h = ctx.canvas.height;
+  const g = ctx.createLinearGradient(0,0,0,h);
+  if(backlight){ g.addColorStop(0,'#c6e04a'); g.addColorStop(1,'#a9c832'); } else { g.addColorStop(0,'#7d8f2a'); g.addColorStop(1,'#687a22'); }
+  ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+  for(let r=0;r<4;r++){
+    const text = (lines[r] || '').padEnd(20).slice(0,20);
+    for(let c=0;c<20;c++){
+      const cols = glyph(text[c]), x0 = M + c*PITCH_X, y0 = M + r*PITCH_Y;
+      for(let cx=0;cx<5;cx++) for(let cy=0;cy<8;cy++){
+        const on = (cols[cx] >> cy) & 1;
+        ctx.fillStyle = on ? '#10190a' : 'rgba(40,60,10,.05)';
+        ctx.fillRect(x0 + cx*(DOT+GAP), y0 + cy*(DOT+GAP), DOT, DOT);
+      }
+    }
+  }
+}
+
+/* ---------- build each tag ---------- */
+const MACHINES = [ { id:'W1', title:'WASHER TAG' }, { id:'D1', title:'DRYER TAG' } ];
+const bench = document.getElementById('bench');
+const LW = M*2 + 20*PITCH_X - CH_GAP, LH = M*2 + 4*PITCH_Y - ROW_GAP;
+MACHINES.forEach(m=>{
+  const u = document.createElement('div'); u.className = 'unit'; u.id = m.id;
+  u.innerHTML = `
+    <h2>${m.title}</h2>
+    <div class="case">
+      <i class="mag l"></i><i class="mag r"></i>
+      <div class="module">
+        <i class="hole tl"></i><i class="hole tr"></i><i class="hole bl"></i><i class="hole br"></i>
+        <div class="pins">${'<i></i>'.repeat(16)}</div>
+        <div class="frame"><canvas class="lcd" width="${LW}" height="${LH}"></canvas></div>
+      </div>
+      <div class="sticker"><canvas class="qr" width="168" height="168"></canvas><b>SCAN ME</b><small>● WhatsApp</small></div>
+      <i class="bar"></i><span class="vib">VIB</span><div class="grille">${'<i></i>'.repeat(12)}</div><span class="waves">🔊</span>
+    </div>
+    <div class="controls"><button class="b3 red shakeBtn">🫨 Shake</button></div>
+    <div class="spec">ESP32 · 20×4 HD44780 LCD (I²C backpack) · RGB LED bar · vibration sensor · buzzer · magnets · USB-C<br>
+      Prints <code>lcd</code> from <code>GET /api/tags/${m.id}</code> · reports <code>POST /api/tags/${m.id}/vibration</code></div>`;
+  bench.appendChild(u);
+  Object.assign(m, { caseEl:u.querySelector('.case'), lcd:u.querySelector('canvas.lcd').getContext('2d'), qr:u.querySelector('canvas.qr').getContext('2d'),
+    bar:u.querySelector('.bar'), vib:u.querySelector('.vib'), btn:u.querySelector('.shakeBtn'), data:null, qrFor:'' });
+  m.btn.onclick = async ()=>{
+    await fetch(`/api/tags/${m.id}/vibration`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ running: !(m.data && m.data.running) }) });
+    poll(m);
+  };
+});
+
+function drawQR(ctx, text){
+  const q = qrcode(0, 'M'); q.addData(text); q.make();
+  const n = q.getModuleCount(), quiet = 2, px = Math.floor(168 / (n + quiet*2)), off = Math.floor((168 - px*(n + quiet*2))/2);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,168,168); ctx.fillStyle = '#000';
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(q.isDark(r,c)) ctx.fillRect(off + (c+quiet)*px, off + (r+quiet)*px, px, px);
+}
+
+function render(m, flashOn){
+  const t = m.data;
+  if(!t){ drawLCD(m.lcd, ['', '  Connecting to', '  Wi-Fi...', ''], true); return; }
+  drawLCD(m.lcd, t.lcd, t.alarm ? flashOn : true);                // alarm → backlight blinks
+  if(m.qrFor !== t.qr){ drawQR(m.qr, t.qr); m.qrFor = t.qr; }
+  const c = t.alarm ? (flashOn ? '#ff2d2d' : '#5a1a1a') : t.color;
+  m.bar.style.background = c; m.bar.style.color = c;
+  m.vib.classList.toggle('on', !!t.running);
+  m.caseEl.classList.toggle('shake', !!t.running);
+  m.caseEl.classList.toggle('beep', !!t.alarm);
+  m.btn.textContent = t.running ? '⏹ Stop shaking' : '🫨 Shake';
+  m.btn.className = 'b3 shakeBtn ' + (t.running ? 'white' : 'red');
+}
+
+/* opened from the house tester by clicking a tag → jump to that machine's tag */
+function focusTag(){
+  const u = document.getElementById(location.hash.slice(1)); if(!u) return;
+  u.scrollIntoView({ behavior:'smooth', block:'center' });
+  u.classList.remove('focus'); void u.offsetWidth; u.classList.add('focus');
+}
+addEventListener('hashchange', focusTag); setTimeout(focusTag, 300);
+
+/* ---------- poll like the ESP32 ---------- */
+async function poll(m){ try { m.data = await (await fetch('/api/tags/' + m.id)).json(); } catch { m.data = null; } }
+MACHINES.forEach(poll);
+setInterval(()=> MACHINES.forEach(poll), 2000);
+let flash = false;
+setInterval(()=>{ flash = !flash; MACHINES.forEach(m=>render(m, flash)); }, 400);
+MACHINES.forEach(m=>render(m, true));
+
+/* ---------- buzzer ---------- */
+let soundOn = true, audio = null;
+try { soundOn = localStorage.getItem('washbot-sound') !== 'off'; } catch {}
+const soundBtn = document.getElementById('soundBtn');
+const paintSound = ()=> soundBtn.textContent = soundOn ? '🔊 Sound on' : '🔈 Sound off';
+soundBtn.onclick = ()=>{ soundOn = !soundOn; try { localStorage.setItem('washbot-sound', soundOn ? 'on' : 'off'); } catch {} paintSound(); };
+paintSound();
+function beep(f, at){ const o=audio.createOscillator(), g=audio.createGain(); o.type='square'; o.frequency.value=f; o.connect(g); g.connect(audio.destination);
+  g.gain.setValueAtTime(.0001,at); g.gain.exponentialRampToValueAtTime(.08,at+.01); g.gain.exponentialRampToValueAtTime(.0001,at+.18); o.start(at); o.stop(at+.2); }
+setInterval(()=>{ if(!soundOn || !MACHINES.some(m=>m.data?.alarm)) return;
+  try { audio = audio || new AudioContext(); const t = audio.currentTime; beep(880,t); beep(660,t+.22); } catch {} }, 1000);
+
+/* ---------- size ---------- */
+document.querySelectorAll('#size button').forEach(b=> b.onclick = ()=>{
+  document.querySelectorAll('#size button').forEach(x=>x.classList.toggle('on', x===b));
+  document.querySelectorAll('.case').forEach(c=> c.style.setProperty('--s', b.dataset.s));
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LaundryBot Tester</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<style>
+  :root{
+    --ink:#3c3c3c; --muted:#8a8a8a; --line:#e5e5e5;
+    --green:#58cc02; --green-d:#58a700; --blue:#1cb0f6; --blue-d:#1899d6;
+    --amber:#ff9600; --amber-d:#e08600; --purple:#ce82ff; --purple-d:#a568cc; --red:#ff4b4b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Nunito,system-ui,sans-serif;background:#f3f8fd;color:var(--ink);padding:18px}
+  main{max-width:1440px;margin:0 auto;display:grid;gap:18px}
+  button{font-family:inherit;cursor:pointer}
+
+  /* top bar */
+  .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .title{display:flex;align-items:center;gap:10px;margin-right:auto}
+  .title h1{font-size:22px;font-weight:900;margin:0;letter-spacing:-.01em}
+  .title p{margin:0;font-size:13px;color:var(--muted);font-weight:700}
+  .top .b3{padding:0 11px;font-size:12.5px;height:40px}
+  .clock{font-weight:900;font-size:18px;font-variant-numeric:tabular-nums;background:#fff;border:2px solid var(--line);box-shadow:0 4px 0 var(--line);border-radius:16px;padding:7px 14px;display:flex;align-items:center;gap:6px}
+
+  /* Duolingo-style 3D buttons */
+  .b3{--sh:var(--blue-d);border:0;border-radius:14px;padding:0 16px;height:44px;font-weight:900;font-size:14px;text-transform:uppercase;letter-spacing:.04em;color:#fff;background:var(--blue);box-shadow:0 4px 0 var(--sh);transition:transform .18s cubic-bezier(.3,1.8,.5,1),box-shadow .18s cubic-bezier(.3,1.8,.5,1),filter .15s;display:inline-flex;align-items:center;gap:6px}
+  .b3:hover{filter:brightness(1.06);transform:translateY(-3px);box-shadow:0 7px 0 var(--sh)}
+  .b3:active{transform:translateY(4px) scale(.98);box-shadow:0 0 0 var(--sh);transition-duration:.06s}
+  .b3.white{--sh:var(--line);background:#fff;color:#777;border:2px solid var(--line)}
+
+  /* machines */
+  .spin{animation:spin 1.1s linear infinite}
+  .wave{animation:wave 1.4s linear infinite}
+  .glow{animation:glow 1.2s ease-in-out infinite}
+  .shake{animation:shake .22s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes ring{from{transform:rotate(-12deg) scale(1)}to{transform:rotate(12deg) scale(1.15)}}
+  .b3.red{--sh:#d33131;background:#ff4b4b}
+
+  .bub{animation:rise 1.6s ease-in infinite}.bub.b2{animation-delay:.5s}.bub.b3{animation-delay:1s}
+  .heat{animation:heat 1.4s ease-in-out infinite}
+  @keyframes rise{from{transform:translateY(0);opacity:.9}to{transform:translateY(-40px);opacity:0}}
+  @keyframes heat{50%{transform:translateY(-4px);opacity:.5}}
+  @keyframes wave{to{transform:translateX(-40px)}}
+  @keyframes glow{50%{opacity:.25}}
+  @keyframes shake{25%{transform:translate(.8px,-.6px)}75%{transform:translate(-.8px,.6px)}}
+
+  /* phones */
+  .house{display:grid;gap:18px}
+  .phone{background:#fff;border:2px solid var(--line);border-radius:26px;box-shadow:0 6px 0 var(--line);overflow:hidden;display:flex;flex-direction:column}
+  .ph{display:flex;align-items:center;gap:12px;padding:12px 14px 10px}
+  .av{width:62px;height:62px;flex:none;transition:transform .3s}
+  .phone:hover .av{transform:rotate(-6deg) scale(1.04)}
+  .ph b{font-size:20px;font-weight:900;display:block}
+  .pill{display:inline-block;margin-top:2px;font-size:12px;font-weight:900;padding:3px 10px;border-radius:99px;color:#fff;background:#afafaf;text-transform:uppercase;letter-spacing:.04em}
+  .chat{background:#efeae2 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='6' cy='6' r='1.6' fill='%23d9d2c5'/%3E%3Ccircle cx='26' cy='24' r='1.6' fill='%23d9d2c5'/%3E%3C/svg%3E");margin:0 12px;border-radius:18px;height:160px;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px}
+  .m{max-width:86%;padding:7px 10px;border-radius:14px;font-size:13.5px;font-weight:700;white-space:pre-wrap;background:#fff;line-height:1.35;box-shadow:0 2px 0 rgba(0,0,0,.06)}
+  .m.me{align-self:flex-end;background:#d9fdd3}
+  .m.alert{background:#ffe1e1;border:2px solid #ffb3b3}
+  .m.solved{background:#e3fbd0;border:2px solid #b8f28b}
+  .m.new{animation:pop .35s cubic-bezier(.3,1.6,.5,1)}
+  .empty{margin:auto;color:#9a9385;font-size:13px;font-weight:800;text-align:center}
+  @keyframes pop{from{opacity:0;transform:scale(.85) translateY(6px)}to{opacity:1;transform:none}}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 12px 0}
+  .chips:empty{display:none}
+  .chip{border:2px solid #b8f28b;background:#e3fbd0;color:#58a700;border-radius:99px;padding:5px 11px;font:900 12px Nunito,sans-serif;box-shadow:0 3px 0 #b8f28b;transition:transform .15s cubic-bezier(.3,1.8,.5,1)}
+  .chip:hover{transform:translateY(-2px)}
+  .chip:active{transform:translateY(3px);box-shadow:none}
+
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;padding:12px}
+  .tile{--sh:var(--line);border:2px solid var(--line);border-radius:16px;background:#fff;box-shadow:0 4px 0 var(--sh);padding:6px 2px 6px;display:flex;flex-direction:column;align-items:center;gap:2px;font-weight:900;font-size:9.5px;color:#777;text-transform:uppercase;letter-spacing:.02em;justify-content:flex-start;
+        transition:transform .2s cubic-bezier(.3,1.8,.5,1),box-shadow .2s cubic-bezier(.3,1.8,.5,1),background .2s,border-color .2s}
+  .tile span{display:block;line-height:1.1;text-align:center}
+  .tile svg{width:34px;height:34px;transition:transform .25s cubic-bezier(.3,1.8,.5,1)}
+  .tile:hover{transform:translateY(-4px);box-shadow:0 8px 0 var(--sh);border-color:#d6e9f5;background:#fbfdff}
+  .tile:hover svg{animation:wiggle .5s ease both}
+  .tile:active{transform:translateY(4px) scale(.97);box-shadow:0 0 0 var(--sh);transition-duration:.06s}
+  .tile:active svg{animation:none;transform:scale(.9)}
+  .tile.rec{--sh:var(--green-d);background:#d7ffb8;border-color:var(--green);color:var(--green-d);animation:bob 1.6s ease-in-out infinite}
+  .tile.rec:hover{animation:none;border-color:var(--green);background:#ccf9a6}
+  .tile.rec:active{animation:none}
+  @keyframes wiggle{0%{transform:scale(1) rotate(0)}35%{transform:scale(1.22) rotate(-10deg)}65%{transform:scale(1.12) rotate(7deg)}100%{transform:scale(1.15) rotate(0)}}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
+  form{display:flex;gap:8px;padding:0 12px 14px}
+  form input{flex:1;min-width:0;height:44px;border-radius:14px;border:2px solid var(--line);background:#f7f7f7;padding:0 12px;font:700 14px Nunito,sans-serif;color:var(--ink)}
+  form input:focus{outline:none;border-color:var(--blue);background:#fff}
+  form .b3{padding:0 14px}
+
+  /* game layout: laundry room scene on top, 3 control panels below */
+  .room{text-align:center;font-weight:900;font-size:13px;letter-spacing:.08em;color:var(--muted)}
+  .scene{background:#fff;border:2px solid var(--line);border-radius:26px;box-shadow:0 6px 0 var(--line);overflow:hidden}
+  .scene svg{display:block;width:100%;height:auto;font-family:Nunito,sans-serif}
+  .panels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start}
+  .panel-title{font-size:12px;font-weight:900;letter-spacing:.08em;color:var(--muted);margin:0 0 -8px 6px}
+  @media (max-width:1100px){ .panels{grid-template-columns:1fr 1fr} }
+  @media (max-width:760px){ .panels{grid-template-columns:1fr} }
+
+  /* ---- figures ---- */
+  .fig .legA{transform-origin:-5px -40px} .fig .legB{transform-origin:5px -40px}
+  .fig .armB{transform-origin:-16px -82px} .fig .armF{transform-origin:16px -82px;transition:transform .35s cubic-bezier(.3,1.5,.5,1)}
+  .fig.walking .legA{animation:step .42s ease-in-out infinite alternate}
+  .fig.walking .legB{animation:step .42s ease-in-out infinite alternate-reverse}
+  .fig.walking .armB{animation:step .42s ease-in-out infinite alternate-reverse}
+  .fig.walking .bodyg{animation:bounce .21s ease-in-out infinite alternate}
+  @keyframes step{from{transform:rotate(22deg)}to{transform:rotate(-22deg)}}
+  @keyframes bounce{to{transform:translateY(-3px)}}
+  .fig.scan .armF{transform:rotate(-135deg)}
+  .fig.reach .armF{transform:rotate(-78deg)}
+  .fig.press .armF{transform:rotate(-150deg)}
+  .fig .phoneG{opacity:0;transition:opacity .2s} .fig.scan .phoneG{opacity:1}
+  .fig .basketG{opacity:0;transition:opacity .25s} .fig.carry .basketG{opacity:1}
+  .fig .basketG .load{opacity:0} .fig.full .basketG .load{opacity:1}
+  .fig .stink path{animation:stink 1.4s ease-in-out infinite} .fig .stink path:nth-child(2){animation-delay:.3s} .fig .stink path:nth-child(3){animation-delay:.6s}
+  @keyframes stink{0%{opacity:0;transform:translateY(4px)}50%{opacity:1}100%{opacity:0;transform:translateY(-6px)}}
+  .fig .drips path{animation:drip 1s ease-in infinite} .fig .drips path:nth-child(2){animation-delay:.35s} .fig .drips path:nth-child(3){animation-delay:.7s}
+  @keyframes drip{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(14px)}}
+  .fig .sparkle{animation:sparkle 1s ease-in-out infinite alternate} @keyframes sparkle{to{opacity:.3}}
+  .fig .tag{font-weight:900}
+  .fig{transition:opacity .5s}
+  .fig.away{opacity:0}
+  .doorSign{transition:opacity .4s}
+  .beam{animation:beam .35s ease-in-out infinite alternate} @keyframes beam{from{opacity:.2}to{opacity:.75}}
+  .sbub{animation:sbub .3s cubic-bezier(.3,1.6,.5,1)} @keyframes sbub{from{opacity:0;transform:translateY(8px)}}
+  .lcdblink{animation:lcdb .8s steps(2) infinite} @keyframes lcdb{50%{fill:#6e7f22}}
+  .ledblink{animation:ledb .8s steps(2) infinite} @keyframes ledb{50%{fill:#5a1a1a}}
+  .mshake{animation:shake .18s linear infinite}
+  .tagLink{cursor:pointer;transition:filter .2s}
+  .tagLink:hover{filter:drop-shadow(0 0 6px rgba(28,176,246,.9))}
+  #dog .dtail{transform-origin:22px -18px;animation:wag .28s ease-in-out infinite alternate}
+  #dog .dhead{transform-origin:-8px -38px;animation:tilt 5s ease-in-out infinite}
+  #dog.excited .dtail{animation-duration:.12s}
+  #dog.excited .dhead{animation:hop .25s ease-in-out infinite alternate}
+  @keyframes wag{from{transform:rotate(-14deg)}to{transform:rotate(18deg)}}
+  @keyframes tilt{0%,70%,100%{transform:rotate(0)}78%,90%{transform:rotate(-12deg)}}
+  @keyframes hop{to{transform:translateY(-4px) rotate(-6deg)}}
+  .vbtn{cursor:pointer}
+  .vbtn .vface{transition:transform .18s cubic-bezier(.3,1.8,.5,1)}
+  .vbtn:hover .vface{transform:translateY(-3px)}
+  .vbtn:active .vface{transform:translateY(4px);transition-duration:.06s}
+  .btnflash{animation:btnf .6s ease-out} @keyframes btnf{0%{fill:#58cc02;r:9}100%{fill:#cfe9fb}}
+  @media (max-width:640px){
+    .board{grid-template-columns:1fr}
+    body{padding:12px}
+    .title h1{font-size:19px}
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div class="title">
+      <svg width="46" height="46" viewBox="0 0 48 48" id="logo"></svg>
+      <div><h1>LaundryBot</h1><p>Pick an action for each housemate and watch them do it · bot tester</p></div>
+    </div>
+    <span class="clock">🕒 <span id="clock">--:--</span></span>
+    <button class="b3" onclick="skip(5)">+5 min</button>
+    <button class="b3" onclick="skip(10)">+10 min</button>
+    <button class="b3" onclick="skip(30)">+30 min</button>
+    <button class="b3 white" id="musicBtn" onclick="Music.toggle()" title="Background music">🎵 Off</button>
+    <button class="b3 white" id="soundBtn" onclick="toggleSound()" title="Alarm beep">🔊 On</button>
+    <a class="b3 white" href="/pitch" target="_blank" style="text-decoration:none">🎤 Pitch</a>
+    <a class="b3 white" href="/device" target="_blank" style="text-decoration:none">📟 Tags</a>
+    <a class="b3 white" href="/admin" target="_blank" style="text-decoration:none">📋 Records</a>
+    <button class="b3 white" onclick="reset()">Reset</button>
+  </div>
+  <div class="scene"><svg id="scene" viewBox="0 0 1200 440" role="img" aria-label="Laundry room"></svg></div>
+  <div class="panels" id="panels"></div>
+</main>
+
+<script>
+/* ------------------------------------------------------------------ */
+/* Housemates                                                          */
+/* ------------------------------------------------------------------ */
+const PEOPLE = [
+  { name:'Enric',   phone:'6590000001', color:'#ff4b4b', dark:'#d33131', bg:'#ffe1e1', skin:'#f6c9a3', hair:'#6b3e1f', style:'spiky' },
+  { name:'Kain',   phone:'6590000002', color:'#ce82ff', dark:'#a568cc', bg:'#f3e3ff', skin:'#e9b48c', hair:'#2b2140', style:'long' },
+  { name:'Edmond', phone:'6590000003', color:'#1cb0f6', dark:'#1899d6', bg:'#dcf3ff', skin:'#8d5a3b', hair:'#1f1a17', style:'afro', glasses:true },
+];
+const LABEL = { W1:'Washer', D1:'Dryer' };
+
+/* ------------------------------------------------------------------ */
+/* Illustrations                                                       */
+/* ------------------------------------------------------------------ */
+function avatar(p, k=''){
+  const id = 'av' + p.name + k, H = p.hair;
+  const back = {
+    long: `<path d="M16 42C14 18 66 18 64 42L67 72C58 77 22 77 13 72Z" fill="${H}"/>`,
+    afro: [[23,33,11],[31,23,12],[44,20,12],[56,27,11],[60,40,9],[20,43,9],[40,26,15]].map(([x,y,r])=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${H}"/>`).join(''),
+    bun:  `<circle cx="40" cy="16" r="9" fill="${H}"/><circle cx="37" cy="13" r="3" fill="#fff" opacity=".18"/>`,
+    pony: `<path d="M55 30C73 30 73 60 62 70C63 53 60 43 52 36Z" fill="${H}"/>`,
+  }[p.style] || '';
+  const front = {
+    spiky: `<path d="M19 42C16 24 28 15 41 16C53 16 64 25 61 42C58 34 53 31 48 29L46 34L41 27L36 33L33 27C27 31 22 35 19 42Z" fill="${H}"/>`,
+    long:  `<path d="M19 41C19 22 61 20 61 38C52 35 44 31 39 25C35 32 27 37 19 41Z" fill="${H}"/>`,
+    afro:  '',
+    bun:   `<path d="M20 40C18 21 62 21 60 40C55 31 25 31 20 40Z" fill="${H}"/>`,
+    buzz:  `<path d="M21 38C22 21 58 21 59 38C52 30 28 30 21 38Z" fill="${H}"/>`,
+    pony:  `<path d="M20 40C19 22 60 20 61 38C50 36 38 32 33 26C30 31 25 36 20 40Z" fill="${H}"/>
+            <circle cx="56" cy="26" r="4.5" fill="#ff4b9a"/><circle cx="63" cy="23" r="4" fill="#ff4b9a"/><circle cx="59.5" cy="24.8" r="2.4" fill="#ffd1e6"/>`,
+  }[p.style];
+  const glasses = p.glasses ? `<g fill="rgba(255,255,255,.25)" stroke="#1f2937" stroke-width="2.4"><circle cx="32.5" cy="44" r="6.2"/><circle cx="47.5" cy="44" r="6.2"/></g><path d="M38.7 44h2.6" stroke="#1f2937" stroke-width="2.4"/>` : '';
+  const freckles = p.freckles ? `<g fill="#c9774a" opacity=".75"><circle cx="28" cy="50" r="1.1"/><circle cx="31" cy="52" r="1.1"/><circle cx="49" cy="52" r="1.1"/><circle cx="52" cy="50" r="1.1"/></g>` : '';
+  return `<svg viewBox="0 0 80 86" class="av" aria-label="${p.name}">
+    <defs>
+      <clipPath id="${id}c"><circle cx="40" cy="40" r="38"/></clipPath>
+      <radialGradient id="${id}g" cx=".32" cy=".28" r=".85"><stop offset="0" stop-color="#fff" stop-opacity=".5"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    </defs>
+    <circle cx="40" cy="45" r="38" fill="${p.dark}"/>
+    <circle cx="40" cy="40" r="38" fill="${p.bg}"/>
+    <g clip-path="url(#${id}c)">
+      ${back}
+      <path d="M11 86C11 67 25 61 40 61C55 61 69 67 69 86Z" fill="${p.color}"/>
+      <path d="M11 86C11 67 25 61 40 61C30 64 22 72 22 86Z" fill="#fff" opacity=".2"/>
+      <rect x="34" y="54" width="12" height="11" rx="5" fill="${p.skin}"/>
+      <path d="M31 62Q40 70 49 62" fill="none" stroke="rgba(0,0,0,.14)" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="19.5" cy="45" r="4.5" fill="${p.skin}"/><circle cx="60.5" cy="45" r="4.5" fill="${p.skin}"/>
+      <circle cx="40" cy="42" r="21" fill="${p.skin}"/>
+      <circle cx="40" cy="42" r="21" fill="url(#${id}g)"/>
+      <ellipse cx="27.5" cy="50" rx="4" ry="2.6" fill="#ff7a8a" opacity=".45"/><ellipse cx="52.5" cy="50" rx="4" ry="2.6" fill="#ff7a8a" opacity=".45"/>
+      <ellipse cx="32.5" cy="44" rx="3.6" ry="4.5" fill="#1f2937"/><circle cx="33.8" cy="42.4" r="1.4" fill="#fff"/>
+      <ellipse cx="47.5" cy="44" rx="3.6" ry="4.5" fill="#1f2937"/><circle cx="48.8" cy="42.4" r="1.4" fill="#fff"/>
+      <path d="M34 51Q40 59 46 51Z" fill="#7a2e1c"/><path d="M37 54.5Q40 57 43 54.5Q40 53 37 54.5Z" fill="#ff7a8a"/>
+      ${front}${glasses}${freckles}
+    </g>
+    <circle cx="40" cy="40" r="37" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2"/>
+  </svg>`;
+}
+
+const ICONS = {
+  washer: `<svg viewBox="0 0 48 48">
+    <rect x="8" y="9" width="32" height="35" rx="8" fill="#b9c6d6"/>
+    <rect x="8" y="6" width="32" height="35" rx="8" fill="#fff" stroke="#dbe3ec" stroke-width="1.5"/>
+    <path d="M8 14V13a7 7 0 0 1 7-7h18a7 7 0 0 1 7 7v1Z" fill="#e5ebf2"/>
+    <circle cx="14" cy="10.4" r="1.8" fill="#1cb0f6"/><circle cx="19.5" cy="10.4" r="1.8" fill="#ffc800"/>
+    <circle cx="24" cy="26" r="10.5" fill="#9fb0c3"/><circle cx="24" cy="26" r="8" fill="#84d8ff"/>
+    <path d="M16 26.5Q20 23.5 24 26.5T32 26.5A8 8 0 0 1 16 26.5Z" fill="#1cb0f6"/>
+    <circle cx="20.5" cy="22.5" r="2.2" fill="#fff" opacity=".85"/>
+    <circle cx="39" cy="6" r="3.4" fill="#dff5ff" stroke="#1cb0f6" stroke-width="1.4"/><circle cx="43.5" cy="12" r="2.2" fill="#dff5ff" stroke="#1cb0f6" stroke-width="1.2"/>
+  </svg>`,
+  dryer: `<svg viewBox="0 0 48 48">
+    <rect x="8" y="12" width="32" height="33" rx="8" fill="#b9c6d6"/>
+    <rect x="8" y="9" width="32" height="33" rx="6" fill="#fff8ef" stroke="#f3e1c8" stroke-width="1.5"/>
+    <path d="M8 17V16a7 7 0 0 1 7-7h18a7 7 0 0 1 7 7v1Z" fill="#e5ebf2"/>
+    <circle cx="33" cy="13.2" r="1.8" fill="#ff9600"/>
+    <rect x="13.5" y="19" width="21" height="20" rx="6" fill="#d7b893"/><rect x="16" y="21.5" width="16" height="15" rx="4.5" fill="#ffc86b"/>
+    <path d="M24 29m-4 0a4 4 0 1 1 4 4a2 2 0 1 1 -2 -2" fill="none" stroke="#ff9600" stroke-width="2.4" stroke-linecap="round"/>
+    <g fill="none" stroke="#ff9600" stroke-width="2.2" stroke-linecap="round"><path d="M17 2q2 2 0 4t0 4"/><path d="M24 1q2 2 0 4t0 4"/><path d="M31 2q2 2 0 4t0 4"/></g>
+  </svg>`,
+  done: `<svg viewBox="0 0 48 48">
+    <ellipse cx="17" cy="19" rx="9" ry="5" fill="#ff86d0"/><ellipse cx="29" cy="18" rx="9" ry="5.5" fill="#84d8ff"/><ellipse cx="23" cy="15" rx="7" ry="4" fill="#fff" stroke="#e5ebf2"/>
+    <path d="M7 24h34l-4 19a4 4 0 0 1-4 3H15a4 4 0 0 1-4-3Z" fill="#e08600"/>
+    <path d="M7 21h34l-4 19a4 4 0 0 1-4 3H15a4 4 0 0 1-4-3Z" fill="#ffb020"/>
+    <path d="M13 27h22M14 33h20M15 38.5h18" stroke="#e08600" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="38" cy="11" r="8.5" fill="#58a700"/><circle cx="38" cy="10" r="8.5" fill="#58cc02"/>
+    <path d="M34 10l3 3 5-5.5" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`,
+  status: `<svg viewBox="0 0 48 48">
+    <rect x="8" y="9" width="32" height="37" rx="7" fill="#a568cc"/>
+    <rect x="8" y="6" width="32" height="37" rx="7" fill="#ce82ff"/>
+    <rect x="12" y="11" width="24" height="28" rx="4" fill="#fff"/>
+    <rect x="17" y="3" width="14" height="7" rx="3.5" fill="#8a94a6"/><rect x="17" y="3" width="14" height="4" rx="2" fill="#b3bccb"/>
+    <circle cx="17" cy="18" r="2.6" fill="#58cc02"/><rect x="22" y="16.5" width="10" height="3" rx="1.5" fill="#dfe5ec"/>
+    <circle cx="17" cy="25" r="2.6" fill="#1cb0f6"/><rect x="22" y="23.5" width="10" height="3" rx="1.5" fill="#dfe5ec"/>
+    <circle cx="17" cy="32" r="2.6" fill="#ff9600"/><rect x="22" y="30.5" width="7" height="3" rx="1.5" fill="#dfe5ec"/>
+  </svg>`,
+  leave: `<svg viewBox="0 0 48 48">
+    <rect x="6" y="8" width="24" height="38" rx="4" fill="#8a94a6"/>
+    <rect x="9" y="8" width="21" height="36" rx="3" fill="#d33131"/>
+    <rect x="9" y="6" width="21" height="36" rx="3" fill="#ff4b4b"/>
+    <rect x="12" y="10" width="15" height="11" rx="2" fill="#ff8a8a"/><rect x="12" y="24" width="15" height="13" rx="2" fill="#ff8a8a"/>
+    <circle cx="25.5" cy="23" r="2" fill="#ffc800"/>
+    <path d="M31 25h12m-5-5 5 5-5 5" fill="none" stroke="#58a700" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 1.5)"/>
+    <path d="M31 25h12m-5-5 5 5-5 5" fill="none" stroke="#58cc02" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`,
+};
+const HAND = `<rect x="13" y="12" width="6" height="18" rx="3"/><rect x="19" y="7" width="6" height="22" rx="3"/><rect x="25" y="8" width="6" height="21" rx="3"/><rect x="31" y="12" width="6" height="18" rx="3"/><path d="M13 24h24v8c0 7-5 12-12 12s-12-5-12-12z"/><rect x="6" y="23" width="6" height="13" rx="3" transform="rotate(-32 9 29)"/>`;
+ICONS.mine = `<svg viewBox="0 0 48 48"><g fill="#e8a877" transform="translate(0 2)">${HAND}</g><g fill="#ffd2a6">${HAND}</g>
+  <circle cx="39" cy="11" r="8" fill="#d33131"/><circle cx="39" cy="9.5" r="8" fill="#ff4b4b"/><text x="39" y="14" text-anchor="middle" font-size="12" font-weight="900" fill="#fff">!</text></svg>`;
+ICONS.queue = `<svg viewBox="0 0 48 48">
+  <rect x="7" y="11" width="34" height="33" rx="7" fill="#1899d6"/><rect x="7" y="8" width="34" height="33" rx="7" fill="#1cb0f6"/>
+  <rect x="11" y="17" width="26" height="20" rx="4" fill="#fff"/><rect x="14" y="4" width="5" height="10" rx="2.5" fill="#8a94a6"/><rect x="29" y="4" width="5" height="10" rx="2.5" fill="#8a94a6"/>
+  <circle cx="35" cy="35" r="10" fill="#ffc800" stroke="#fff" stroke-width="2.5"/><path d="M35 29v6.5l4 2.5" fill="none" stroke="#3c3c3c" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M15 23h8M15 29h5" stroke="#bfe6fb" stroke-width="3" stroke-linecap="round"/></svg>`;
+ICONS.moved = `<svg viewBox="0 0 48 48">
+  <path d="M7 26h34l-4 16a4 4 0 0 1-4 3H15a4 4 0 0 1-4-3Z" fill="#a568cc"/><path d="M7 23h34l-4 16a4 4 0 0 1-4 3H15a4 4 0 0 1-4-3Z" fill="#ce82ff"/>
+  <path d="M13 29h22M14 35h20" stroke="#a568cc" stroke-width="2" stroke-linecap="round"/>
+  <path d="M-9-7l5-3h8l5 3 4 5-5 2.5V11h-12V-.5L-13-3z" transform="translate(20 13) scale(.75) rotate(-12)" fill="#84d8ff" stroke="#1899d6" stroke-width="1.5"/>
+  <path d="M34 20V6m-5 5 5-5 5 5" fill="none" stroke="#58a700" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 1.5)"/>
+  <path d="M34 20V6m-5 5 5-5 5 5" fill="none" stroke="#58cc02" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const ACTIONS = [
+  { cmd:'START WASHER', label:'Scan washer', icon:'washer' },
+  { cmd:'START DRYER',  label:'Scan dryer',  icon:'dryer' },
+  { cmd:'QUEUE',    label:'Queue',  icon:'queue' },
+  { cmd:'DONE',     label:'Done',   icon:'done' },
+  { cmd:'STATUS',   label:'Status', icon:'status' },
+  { cmd:'LEAVE',    label:'Leave',  icon:'leave' },
+  { cmd:'MOVED',    label:'Moved',  icon:'moved' },
+  { cmd:'MINE',     label:'Mine!',  icon:'mine' },
+];
+document.getElementById('logo').innerHTML = ICONS.washer.replace(/<\/?svg[^>]*>/g,'');
+
+/* ------------------------------------------------------------------ */
+/* Build the six phones                                                */
+/* ------------------------------------------------------------------ */
+const byPhone = Object.fromEntries(PEOPLE.map(p=>[p.phone,p]));
+const esc = s => String(s).replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+let seq = 0, state = null;
+
+PEOPLE.forEach((p,i)=>{
+  const el = document.createElement('div'); el.className = 'phone';
+  el.innerHTML = `
+    <div class="ph">${avatar(p)}<div><b>${p.name}</b><span class="pill" style="display:none"></span></div></div>
+    <div class="chat"><div class="empty">No messages yet 👋</div></div>
+    <div class="chips"></div>
+    <div class="tiles">${ACTIONS.map(a=>`<button class="tile" data-c="${a.cmd}">${ICONS[a.icon]}<span>${a.label}</span></button>`).join('')}</div>
+    <form><input placeholder="Message as ${p.name}…"><button class="b3" aria-label="Send">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M3 11.5 20 4l-7.5 17-2.2-7.3z"/></svg></button></form>`;
+  el.querySelectorAll('.tile').forEach(b=> b.onclick = ()=> act(p, b.dataset.c));
+  el.querySelector('form').onsubmit = e=>{ e.preventDefault(); const i=e.target.querySelector('input'); act(p, i.value); i.value=''; };
+  p.el = el; p.chat = el.querySelector('.chat');
+  document.getElementById('panels').appendChild(el);
+});
+
+function addMsg(p, text, me){
+  p.chat.querySelector('.empty')?.remove();
+  const kind = me ? ' me' : text.startsWith('🚨') ? ' alert' : text.startsWith('✅ Mystery') ? ' solved' : '';
+  const d = document.createElement('div'); d.className = 'm new' + kind; d.textContent = text;
+  p.chat.appendChild(d); p.chat.scrollTop = p.chat.scrollHeight;
+}
+async function post(url, body){ await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})}); await poll(); }
+async function say(p, text){ if(!text.trim()) return; addMsg(p, text, true); await post('/dev/message',{ from:p.phone, name:p.name, text }); }
+async function skip(minutes){ await post('/dev/skip',{ minutes }); }
+const register = () => fetch('/dev/residents',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ people:PEOPLE.map(p=>({phone:p.phone,name:p.name})) })});
+async function reset(){ await fetch('/dev/reset',{method:'POST'}); await register(); lostFound = null; renderLostFound(); PEOPLE.forEach(p=>{ p.load = null; clearChips(p); }); PEOPLE.forEach(p=>p.chat.innerHTML='<div class="empty">No messages yet 👋</div>'); await poll(); }
+
+/* what each person is doing, and which button they should probably tap */
+const PILL = { free:'#afafaf', using:'#1cb0f6', done:'#ff9600', turn:'#ce82ff', waiting:'#ffc800', alert:'#ff4b4b' };
+function situation(p){
+  const unclaimed = Object.keys(state.db).filter(id=>state.db[id].state==='unclaimed');
+  const busy = Object.values(state.db).some(m=>m.user?.phone===p.phone && (m.state==='inuse' || m.state==='done'));
+  if(unclaimed.length && !busy)
+    return { pill:'alert', st:'🚨 Alarm!', hint:`🚨 The ${unclaimed.map(id=>LABEL[id].toLowerCase()).join(' and ')} started without a scan. If it's your load, tap Mine!`, rec:['MINE'] };
+  for(const [id,m] of Object.entries(state.db)){
+    if(m.user?.phone === p.phone){
+      const until = new Date(m.until).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+      if(m.state==='inuse') return { pill:'using', st:`Using ${LABEL[id]}`, hint:`⏳ Your ${LABEL[id].toLowerCase()} runs until ${until}. Use the time buttons to fast-forward.`, rec:[] };
+      if(m.state==='done')  return { pill:'done', st:`${LABEL[id]} done`, hint:`🧺 Go grab your clothes, then tap Done! (To play someone who forgets: don't tap anything — +10 min sends a 2nd reminder, another +10 min frees the machine.)`, rec:['DONE'] };
+      if(m.state==='next')  return m.leftover
+        ? { pill:'turn', st:'Your turn!', hint:`🎉 Your turn! ⚠️ ${m.leftover.name}'s clothes may still be inside — move them to the basket and tap Moved, then Scan ${LABEL[id].toLowerCase()}.`, rec:['MOVED','START '+LABEL[id].toUpperCase()] }
+        : { pill:'turn', st:'Your turn!', hint:`🎉 It's your turn — tap Scan ${LABEL[id].toLowerCase()} before ${until}.`, rec:['START '+LABEL[id].toUpperCase()] };
+    }
+    const pos = m.queue.findIndex(u=>u.phone===p.phone);
+    if(pos >= 0) return { pill:'waiting', st:`#${pos+1} in line`, hint:`🙋 You're #${pos+1} for the ${LABEL[id].toLowerCase()} — expect to load around ${state.etas[id][pos]}. Tap Leave to give up your spot.`, rec:[] };
+  }
+  if(p.load?.at === 'hands' && p.load.stage === 'wet')
+    return { pill:'free', st:'Wet clothes', rec: [state.db.D1.state === 'free' ? 'START DRYER' : 'QUEUE'],
+      hint: state.db.D1.state === 'free' ? '💧 Your washed clothes are in your basket — tap Scan dryer to dry them.' : '💧 Your washed clothes are ready but the dryer is busy — tap Queue to book it.' };
+  if(p.load?.at === 'lf') return { pill:'done', st:'Clothes in L&F', rec:['DONE'], hint:"😅 Someone moved your clothes to Lost & Found — tap Done to fetch them." };
+  const free = Object.keys(state.db).filter(id=>state.db[id].state==='free');
+  const left = free.find(id=>state.db[id].leftover && state.db[id].leftover.phone !== p.phone);
+  if(left) return { pill:'free', st:'', rec:['MOVED', ...free.map(id=>'START '+LABEL[id].toUpperCase())],
+    hint:`⚠️ The ${LABEL[left].toLowerCase()} is free, but ${state.db[left].leftover.name}'s clothes may still be inside. Took them out? Tap Moved.` };
+  const mineLeft = Object.keys(state.db).find(id=>state.db[id].leftover?.phone === p.phone);
+  if(mineLeft) return { pill:'done', st:'Clothes left!', rec:['DONE'],
+    hint:`😬 Your clothes may still be in the ${LABEL[mineLeft].toLowerCase()} — go get them, then tap Done.` };
+  return { pill:'free', st:'', rec: state.db.W1.state==='free' ? ['START WASHER'] : ['QUEUE'],
+    hint: state.db.W1.state==='free' ? '🧺 Got a basket of dirty laundry? The washer is free — tap Scan washer!' : '👀 The washer is busy — tap Queue to book a spot, then chill in your room.' };
+}
+
+/* ------------------------------------------------------------------ */
+/* Washer & dryer with their tag and the clothes inside                */
+/* ------------------------------------------------------------------ */
+const MCOLOR = { free:'#58cc02', inuse:'#1cb0f6', done:'#ff9600', next:'#ce82ff', unclaimed:'#ff4b4b' };
+const MYSTERY = { color:'#9ca3af', dark:'#6b7280', bg:'#e5e7eb' };   // clothes of an unknown owner
+const hhmm = ms => new Date(ms).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+async function poll(){
+  const r = await (await fetch('/dev/state?since='+seq)).json();
+  state = r;
+  document.getElementById('clock').textContent = r.clock;
+  r.messages.forEach(m=>{ seq = Math.max(seq, m.seq); const p = byPhone[m.to]; if(p){ addMsg(p, m.text, false); showChips(p, m.text); } });
+  alarmOn = false;
+  for(const id of ['W1','D1']){
+    const t = await (await fetch('/api/tags/'+id)).json();
+    TAGS[id] = t;
+    if(t.alarm) alarmOn = true;
+  }
+  PEOPLE.forEach(p=>{
+    const s = situation(p), pill = p.el.querySelector('.pill');
+    pill.textContent = s.st; pill.style.background = PILL[s.pill]; pill.style.display = s.st ? '' : 'none';
+    p.el.querySelectorAll('.tile').forEach(b=> b.classList.toggle('rec', s.rec.includes(b.dataset.c)));
+  });
+  renderScene();
+}
+
+/* ================================================================== */
+/* Laundry-room scene: figures walk, scan, load, collect               */
+/* ================================================================== */
+const NS = 'http://www.w3.org/2000/svg';
+const SC = document.getElementById('scene');
+const FLOOR = 402;                                                    // feet line
+const MX = { W1:{ x:560, y:110, door:[640,262], qrLeft:true }, D1:{ x:780, y:110, door:[860,262], qrLeft:false } };
+const HOME = [80, 200, 320];                                          // in front of each person's bedroom door
+const STAND = { W1:{ x:520, dir:1 }, D1:{ x:990, dir:-1 } };
+const LF = { x:1055 };                                                // lost & found basket
+const TAGS = {}, hold = {};
+let lostFound = null;                                                 // { phone, color } — clothes someone moved out
+const el = (tag, attrs={}, parent) => { const e = document.createElementNS(NS, tag); for(const k in attrs) e.setAttribute(k, attrs[k]); if(parent) parent.appendChild(e); return e; };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function tween(ms, fn, linear){ return new Promise(res=>{ const t0 = performance.now();
+  const f = now => { const k = Math.min(1, (now - t0) / ms); fn(linear ? k : (k<.5 ? 2*k*k : 1 - Math.pow(-2*k+2, 2)/2)); if(k < 1) requestAnimationFrame(f); else res(); };
+  requestAnimationFrame(f); setTimeout(()=>{ fn(1); res(); }, ms + 400); }); }       // fallback if frames are paused
+
+/* ---------- room ---------- */
+SC.innerHTML = `
+  <defs>
+    <linearGradient id="wallG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef5fc"/><stop offset="1" stop-color="#e2ecf6"/></linearGradient>
+    <pattern id="tiles" width="40" height="40" patternUnits="userSpaceOnUse"><rect width="40" height="40" fill="#f3efe7"/><path d="M0 0h40v40" fill="none" stroke="#e4ddd0" stroke-width="2"/></pattern>
+  </defs>
+  <rect width="1200" height="330" fill="url(#wallG)"/>
+  <rect y="320" width="1200" height="120" fill="url(#tiles)"/>
+  <rect y="316" width="1200" height="8" fill="#d8e2ec"/>
+  <g id="doors"></g>
+  <g id="zooms"></g>
+  <g id="lf" transform="translate(${LF.x} 360)">
+    <path d="M-40 0h80l-7 38h-66z" fill="#d7a86a"/><path d="M-40 0h80l-2 6h-76z" fill="#b98848"/>
+    <path d="M-34 14h68M-32 26h64" stroke="#b98848" stroke-width="2.5"/>
+    <g id="lfLoad"></g>
+    <text y="58" text-anchor="middle" font-size="12" font-weight="900" fill="#8a94a6">LOST &amp; FOUND</text>
+  </g>
+  <g id="dog" transform="translate(1150 404)" style="cursor:pointer">
+    <ellipse cx="4" cy="2" rx="30" ry="6" fill="rgba(0,0,0,.12)"/>
+    <g class="dtail"><path d="M22-18c14-4 18-18 14-28" fill="none" stroke="#c98a3c" stroke-width="7" stroke-linecap="round"/></g>
+    <ellipse cx="8" cy="-20" rx="21" ry="19" fill="#e0a458"/>
+    <ellipse cx="18" cy="-6" rx="11" ry="7" fill="#c98a3c"/>
+    <rect x="-12" y="-24" width="8" height="24" rx="4" fill="#e0a458"/><rect x="-2" y="-24" width="8" height="24" rx="4" fill="#d4974a"/>
+    <ellipse cx="-8" cy="-1" rx="6" ry="3.5" fill="#f3d3a4"/><ellipse cx="2" cy="-1" rx="6" ry="3.5" fill="#f3d3a4"/>
+    <ellipse cx="-4" cy="-26" rx="9" ry="12" fill="#f7e3c2"/>
+    <g class="dhead">
+      <circle cx="-8" cy="-50" r="16" fill="#e0a458"/>
+      <path d="M2-62c9-2 13 10 8 22-4-2-9-10-8-22z" fill="#a8702e"/>
+      <ellipse cx="-21" cy="-45" rx="10" ry="7.5" fill="#f7e3c2"/>
+      <ellipse cx="-29" cy="-48" rx="3.6" ry="3" fill="#2e2e2e"/>
+      <path d="M-26-40q5 4 9 0" fill="none" stroke="#2e2e2e" stroke-width="1.8" stroke-linecap="round"/>
+      <path class="dtongue" d="M-23-39q2 7 6 0z" fill="#ff7a8a"/>
+      <circle cx="-12" cy="-55" r="3" fill="#2e2e2e"/><circle cx="-11" cy="-56" r="1" fill="#fff"/>
+      <ellipse cx="-3" cy="-48" rx="3.5" ry="2.2" fill="#ff7a8a" opacity=".45"/>
+    </g>
+    <path d="M-20-35q12 6 24 0" fill="none" stroke="#ff4b4b" stroke-width="4.5" stroke-linecap="round"/>
+    <circle cx="-8" cy="-31" r="3.2" fill="#ffc800"/>
+    <g class="dogBub"></g>
+  </g>
+  <g id="machinesG"></g><g id="beams"></g><g id="figs"></g><g id="fly"></g>`;
+
+/* ---------- machines with their LCD tags ---------- */
+const SH = 'M-9-7l5-3h8l5 3 4 5-5 2.5V11h-12V-.5L-13-3z';
+function clothesSVG(cx, cy, p, spinning){
+  const cols = [p.color, '#ffffff', p.dark, p.bg, p.color];
+  const spots = spinning ? [0,72,144,216,288].map((a,i)=>{ const r=a*Math.PI/180, d=i%2?17:11; return [cx+Math.cos(r)*d, cy+Math.sin(r)*d, a]; })
+                         : [[cx-16,cy+20,-20],[cx,cy+23,8],[cx+16,cy+19,24],[cx-8,cy+11,-8],[cx+9,cy+10,14]];
+  return spots.map(([x,y,a],i)=>`<path d="${SH}" transform="translate(${x} ${y}) rotate(${a}) scale(1.2)" fill="${cols[i]}" stroke="rgba(0,0,0,.2)" stroke-width="1"/>`).join('');
+}
+function buildMachine(id){
+  const { x, y, door:[cx,cy], qrLeft } = MX[id], dryer = id==='D1';
+  const g = el('g', { id:'sm-'+id }, document.getElementById('machinesG'));
+  const qx = qrLeft ? x+10 : x+118, lx = qrLeft ? x+48 : x+10;
+  g.innerHTML = `
+    <ellipse cx="${x+80}" cy="${y+214}" rx="86" ry="8" fill="rgba(0,0,0,.08)"/>
+    <g class="mb">
+      <rect x="${x}" y="${y+6}" width="160" height="210" rx="${dryer?14:20}" fill="${dryer?'#e3c9a5':'#c4cfdc'}"/>
+      <rect x="${x}" y="${y}" width="160" height="210" rx="${dryer?14:20}" fill="${dryer?'#fff8ef':'#fff'}" stroke="${dryer?'#f3e1c8':'#e1e7ef'}" stroke-width="2"/>
+      <path d="M${x} ${y+30}v-10a20 20 0 0 1 20-20h120a20 20 0 0 1 20 20v10z" fill="${dryer?'#ffe9cc':'#e6f5fe'}"/>
+      <text x="${x+14}" y="${y+20}" font-size="10" font-weight="900" fill="${dryer?'#e08600':'#1899d6'}" letter-spacing="1.5">${dryer?'DRYER':'WASHER'}</text>
+      <circle class="startBtn" cx="${x+142}" cy="${y+15}" r="7" fill="#cfe9fb" stroke="${dryer?'#ff9600':'#1cb0f6'}" stroke-width="2"/>
+      <g class="tagLink" data-tag="${id}"><title>Open the tag view</title>
+      <!-- the tag: 3D-printed case, 20×4 LCD, QR sticker, RGB bar -->
+      <rect x="${x+5}" y="${y+33}" width="150" height="62" rx="8" fill="#ece7dd" stroke="#d6cfc2"/>
+      <rect x="${lx-3}" y="${y+37}" width="108" height="48" rx="3" fill="#237a3c"/>
+      <rect class="glass" x="${lx}" y="${y+40}" width="102" height="42" rx="1.5" fill="#b8d43a"/>
+      ${[0,1,2,3].map(i=>`<text class="lcdt" x="${lx+2}" y="${y+49+i*9.4}" font-family="ui-monospace,Menlo,monospace" font-size="8.3" font-weight="700" fill="#1f2a10" xml:space="preserve"></text>`).join('')}
+      <rect class="led" x="${lx}" y="${y+87}" width="102" height="4.5" rx="2.25" fill="#16a34a"/>
+      <rect x="${qx}" y="${y+38}" width="32" height="44" rx="4" fill="#fff" stroke="#e5e5e5"/>
+      <g class="qr" transform="translate(${qx+2} ${y+40})"></g>
+      <text x="${qx+16}" y="${y+79}" text-anchor="middle" font-size="6.5" font-weight="900" fill="#333">SCAN ME</text>
+      </g>
+      <!-- door + drum -->
+      ${dryer ? `<rect x="${cx-50}" y="${cy-50}" width="100" height="100" rx="26" fill="#f1dcc0"/><rect x="${cx-40}" y="${cy-40}" width="80" height="80" rx="20" fill="#4a3426"/>`
+              : `<circle cx="${cx}" cy="${cy}" r="52" fill="#dfe6ee"/><circle cx="${cx}" cy="${cy}" r="41" fill="#274060"/>`}
+      <clipPath id="clip-${id}">${dryer ? `<rect x="${cx-40}" y="${cy-40}" width="80" height="80" rx="20"/>` : `<circle cx="${cx}" cy="${cy}" r="41"/>`}</clipPath>
+      <g clip-path="url(#clip-${id})"><g class="fx"></g><g class="drum" style="transform-origin:${cx}px ${cy}px"></g></g>
+      <g class="door">${dryer ? `<rect x="${cx-40}" y="${cy-40}" width="80" height="80" rx="20" fill="rgba(255,237,213,.14)" stroke="#d7b893" stroke-width="6"/>`
+                              : `<circle cx="${cx}" cy="${cy}" r="45" fill="rgba(191,219,254,.16)" stroke="#aebdcc" stroke-width="7"/>`}
+        <rect x="${cx+(dryer?33:40)}" y="${cy-12}" width="8" height="24" rx="4" fill="#9aa6b6"/></g>
+    </g>
+    <g class="vbtn" data-vibe="${id}" data-on="1" transform="translate(${x+80} 344)"><g class="vface">
+      <rect class="vsh" x="-86" y="0" width="172" height="30" rx="13" fill="#d33131"/>
+      <rect class="vtop" x="-86" y="-5" width="172" height="30" rx="13" fill="#ff4b4b"/>
+      <text class="vtxt" y="14" text-anchor="middle" font-size="11" font-weight="900" fill="#fff" letter-spacing=".3">🫨 START WITHOUT SCAN</text>
+    </g></g>`;
+  return g;
+}
+const SMS = { W1: buildMachine('W1'), D1: buildMachine('D1') };
+const ZOOM = {};
+['W1','D1'].forEach(id=>{
+  const { x } = MX[id], zx = x - 22, g = el('g', { class:'tagLink', 'data-tag':id }, document.getElementById('zooms'));
+  g.innerHTML = `
+    <path d="M${x+80} 96 L${x+80} 128" stroke="#9aa6b6" stroke-width="2" stroke-dasharray="3 4"/>
+    <rect x="${zx}" y="6" width="204" height="92" rx="8" fill="#237a3c"/>
+    <rect class="zglass" x="${zx+7}" y="13" width="190" height="78" rx="3" fill="#b8d43a"/>
+    ${[0,1,2,3].map(i=>`<text class="zt" x="${zx+13}" y="${31+i*17.5}" font-family="ui-monospace,Menlo,monospace" font-size="14.5" font-weight="800" fill="#1f2a10" xml:space="preserve"></text>`).join('')}`;
+  ZOOM[id] = g;
+});
+const qrDone = {};
+function qrPath(text, size){
+  const q = qrcode(0, 'M'); q.addData(text); q.make();
+  const n = q.getModuleCount(), px = size / n; let d = '';
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(q.isDark(r,c)) d += `M${(c*px).toFixed(2)} ${(r*px).toFixed(2)}h${px.toFixed(2)}v${px.toFixed(2)}h-${px.toFixed(2)}z`;
+  return `<path d="${d}" fill="#000"/>`;
+}
+const sceneSig = {};
+function renderSceneMachine(id){
+  const t = TAGS[id], m = state?.db[id], g = SMS[id]; if(!t || !m) return;
+  const lines = (t.lcd || []).map(l=>l.replace(/ÿ/g,'█').replace(/¥/g,'·'));
+  g.querySelectorAll('.lcdt').forEach((tx,i)=> tx.textContent = lines[i] || '');
+  ZOOM[id].querySelectorAll('.zt').forEach((tx,i)=> tx.textContent = lines[i] || '');
+  ZOOM[id].querySelector('.zglass').classList.toggle('lcdblink', !!t.alarm);
+  g.querySelector('.glass').classList.toggle('lcdblink', !!t.alarm);
+  const vb = g.querySelector('.vbtn');
+  vb.dataset.on = m.running ? '0' : '1';
+  vb.querySelector('.vtop').setAttribute('fill', m.running ? '#ffffff' : '#ff4b4b');
+  vb.querySelector('.vtop').setAttribute('stroke', m.running ? '#e5e5e5' : 'none');
+  vb.querySelector('.vsh').setAttribute('fill', m.running ? '#e5e5e5' : '#d33131');
+  vb.querySelector('.vtxt').setAttribute('fill', m.running ? '#777' : '#fff');
+  vb.querySelector('.vtxt').textContent = m.running ? '⏹ MACHINE STOPS' : '🫨 START WITHOUT SCAN';
+  const led = g.querySelector('.led'); led.setAttribute('fill', t.alarm ? '#ff2d2d' : t.color); led.classList.toggle('ledblink', !!t.alarm);
+  if(qrDone[id] !== t.qr){ g.querySelector('.qr').innerHTML = qrPath(t.qr, 28); qrDone[id] = t.qr; }
+  const owner = m.user ? byPhone[m.user.phone] : null, leftBy = m.leftover ? byPhone[m.leftover.phone] : null;
+  let loaded = ['inuse','done','unclaimed'].includes(m.state) || m.running || !!leftBy;
+  let spinning = m.state==='inuse' || !!m.running;
+  if(hold[id]){ loaded = hold[id].loaded; spinning = hold[id].spinning; }
+  const who = (m.state==='inuse' || m.state==='done' ? owner : leftBy || owner) || MYSTERY;
+  const sig = [loaded, spinning, who.color].join('|');
+  if(sceneSig[id] !== sig){
+    sceneSig[id] = sig;
+    const [cx, cy] = MX[id].door;
+    g.querySelector('.drum').innerHTML = loaded ? clothesSVG(cx, cy, who, spinning) : '';
+    g.querySelector('.drum').classList.toggle('spin', spinning);
+    g.querySelector('.fx').innerHTML = !spinning ? '' : id==='D1'
+      ? `<rect class="glow" x="${cx-40}" y="${cy-40}" width="80" height="80" fill="#ff9600" opacity=".45"/>`
+      : `<path class="wave" d="M${cx-60} ${cy+4}q10-6 20 0t20 0 20 0 20 0 20 0 20 0v50H${cx-60}z" fill="#1cb0f6" opacity=".6"/>`;
+    g.querySelector('.mb').classList.toggle('mshake', spinning);
+  }
+}
+function setDoor(id, open){                                           // 0 = closed, 1 = open
+  const [cx] = MX[id].door, h = cx - (id==='D1' ? 40 : 45);
+  SMS[id].querySelector('.door').setAttribute('transform', `translate(${h} 0) scale(${1 - open*0.85} 1) translate(${-h} 0)`);
+}
+const openDoor  = id => tween(350, k => setDoor(id, k));
+const closeDoor = id => tween(300, k => setDoor(id, 1 - k));
+
+/* ---------- figures ---------- */
+function headSVG(p){
+  const a = avatar(p, 'fig');
+  const inner = a.slice(a.indexOf('<g clip-path'), a.lastIndexOf('</g>') + 4)
+    .replace(/<g clip-path="[^"]*">/, '<g>')
+    .replace(/<path d="M11 86[^>]*>\s*<path d="M11 86[^>]*>/, '')      // drop the shirt from the badge
+    .replace(/<rect x="34" y="54"[^>]*>\s*<path d="M31 62[^>]*>/, '');
+  const defs = a.slice(a.indexOf('<defs>'), a.indexOf('</defs>') + 7);
+  return defs + inner;
+}
+PEOPLE.forEach((p,i)=>{
+  const g = el('g', { class:'fig' }, document.getElementById('figs'));
+  g.innerHTML = `
+    <ellipse cx="0" cy="2" rx="24" ry="6" fill="rgba(0,0,0,.12)"/>
+    <g class="flip"><g class="bodyg">
+      <g class="legA"><rect x="-11" y="-42" width="10" height="40" rx="5" fill="#3c4a6b"/><ellipse cx="-5" cy="-2" rx="9" ry="5" fill="#2e2e2e"/></g>
+      <g class="legB"><rect x="1" y="-42" width="10" height="40" rx="5" fill="#34405e"/><ellipse cx="7" cy="-2" rx="9" ry="5" fill="#2e2e2e"/></g>
+      <g class="armB"><rect x="-21" y="-86" width="10" height="38" rx="5" fill="${p.dark}"/><circle cx="-16" cy="-46" r="5.5" fill="${p.skin}"/></g>
+      <rect x="-18" y="-94" width="36" height="56" rx="15" fill="${p.color}"/>
+      <path d="M-18-80a15 15 0 0 1 15-14h6" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="4" stroke-linecap="round"/>
+      <g transform="translate(-40 -160)">${headSVG(p)}</g>
+      <g class="basketG"><g class="load"></g><path d="M14-64h42l-6 26H20z" fill="#d7a86a"/><path d="M17-56h36M19-47h32" stroke="#b98848" stroke-width="2"/></g>
+      <g class="armF"><rect x="11" y="-86" width="10" height="38" rx="5" fill="${p.color}"/><circle cx="16" cy="-46" r="5.5" fill="${p.skin}"/>
+        <g class="phoneG"><rect x="9" y="-44" width="14" height="22" rx="3" fill="#1f2937"/><rect x="11" y="-41" width="10" height="15" rx="1.5" fill="#25d366"/></g></g>
+    </g></g>
+    <g class="tagG"><rect x="-44" y="10" width="88" height="22" rx="11" fill="#fff" stroke="${p.color}" stroke-width="2"/>
+      <text class="tag" y="25" text-anchor="middle" font-size="11" fill="#3c3c3c">${p.name}</text></g>
+    <g class="bubbleG"></g>`;
+  p.fig = { g, x: HOME[i], dir: 1, home: HOME[i], i };
+  placeFig(p);
+});
+PEOPLE.forEach(p=>{
+  const x = p.fig.home, d = el('g', { transform:`translate(${x-46} 156)` }, document.getElementById('doors'));
+  d.innerHTML = `
+    <rect width="92" height="164" rx="8" fill="${p.bg}" stroke="${p.color}" stroke-width="3"/>
+    <rect x="9" y="30" width="74" height="126" rx="5" fill="#fff" opacity=".55"/>
+    <circle cx="74" cy="96" r="5" fill="${p.dark}"/>
+    <rect x="16" y="6" width="60" height="18" rx="9" fill="${p.color}"/>
+    <text x="46" y="19" text-anchor="middle" font-size="11" font-weight="900" fill="#fff">${p.name.toUpperCase()}</text>
+    <g class="doorSign" opacity="0"><rect x="6" y="52" width="80" height="40" rx="10" fill="#fff" stroke="${p.color}" stroke-width="2"/>
+      <text class="sign1" x="46" y="69" text-anchor="middle" font-size="12" font-weight="900" fill="#3c3c3c">😎 chilling</text>
+      <text class="sign2" x="46" y="84" text-anchor="middle" font-size="10" font-weight="800" fill="#8a8a8a"></text></g>`;
+  p.fig.door = d;
+});
+function placeFig(p){
+  const f = p.fig;
+  f.g.setAttribute('transform', `translate(${f.x} ${FLOOR})`);
+  f.g.querySelector('.flip').setAttribute('transform', `scale(${f.dir} 1)`);
+}
+function pose(p, cls, on){ p.fig.g.classList.toggle(cls, on); }
+function face(p, dir){ p.fig.dir = dir; placeFig(p); }
+async function walkTo(p, x){
+  const f = p.fig, x0 = f.x, dist = Math.abs(x - x0);
+  if(dist < 2) return;
+  face(p, x > x0 ? 1 : -1); pose(p, 'walking', true);
+  await tween(dist / 0.3, k => { f.x = x0 + (x - x0) * k; placeFig(p); }, true);
+  pose(p, 'walking', false);
+}
+const walkHome = async p => { await walkTo(p, p.fig.home); face(p, 1); };
+function bubble(p, text, ms = 2600){
+  const b = p.fig.g.querySelector('.bubbleG'); b.innerHTML = '';
+  const g = el('g', { class:'sbub', transform:'translate(0 -178)' }, b);
+  const r = el('rect', { rx:12, fill:'#fff', stroke:'#e5e5e5', 'stroke-width':2 }, g);
+  const t = el('text', { 'text-anchor':'middle', 'font-size':13, 'font-weight':800, fill:'#3c3c3c', y:4 }, g); t.textContent = text;
+  const bb = t.getBBox(); r.setAttribute('x', bb.x - 10); r.setAttribute('y', bb.y - 6); r.setAttribute('width', bb.width + 20); r.setAttribute('height', bb.height + 12);
+  el('path', { d:'M-6 14l6 9 6-9z', fill:'#fff', transform:`translate(0 ${bb.y + bb.height - 8})` }, g);
+  clearTimeout(p.fig.bt); p.fig.bt = setTimeout(()=> b.innerHTML = '', ms);
+}
+function worldHand(p, poseName){                                      // where the front hand is, in scene coords
+  const f = p.fig, local = poseName === 'scan' ? [32, -106] : [52, -72];
+  return [f.x + f.dir * local[0], FLOOR + local[1]];
+}
+function basketPos(p){ const f = p.fig; return [f.x + f.dir * 35, FLOOR - 64]; }
+function qrCenter(id){ const { x, y, qrLeft } = MX[id]; return [qrLeft ? x+26 : x+134, y+54]; }
+
+async function scanAnim(p, id){
+  pose(p, 'scan', true);
+  await sleep(350);
+  const [hx, hy] = worldHand(p, 'scan'), [qx, qy] = qrCenter(id);
+  const beam = el('path', { class:'beam', d:`M${hx} ${hy}L${qx-14} ${qy-18}L${qx+14} ${qy+18}Z`, fill:'#25d366' }, document.getElementById('beams'));
+  await sleep(900); beam.remove();
+}
+async function flyClothes(p, from, to, colors){
+  const fly = document.getElementById('fly');
+  for(const c of colors){
+    const s = el('path', { d:SH, fill:c, stroke:'rgba(0,0,0,.2)', 'stroke-width':1 }, fly);
+    await tween(380, k => {
+      const x = from[0] + (to[0]-from[0])*k, y = from[1] + (to[1]-from[1])*k - Math.sin(k*Math.PI)*60;
+      s.setAttribute('transform', `translate(${x} ${y}) rotate(${k*360}) scale(${1.3 - k*.2})`);
+    });
+    s.remove();
+  }
+}
+async function pressStart(p, id){
+  pose(p, 'reach', false); pose(p, 'press', true); await sleep(350);
+  const b = SMS[id].querySelector('.startBtn'); b.classList.remove('btnflash'); void b.getBBox(); b.classList.add('btnflash');
+  await sleep(300); pose(p, 'press', false);
+}
+
+/* ---------- what each action looks like ---------- */
+const busy = new Map();
+function act(p, text){
+  if(!text || !text.trim()) return;
+  const next = (busy.get(p) || Promise.resolve()).then(()=>perform(p, text)).catch(console.error);
+  busy.set(p, next); return next;
+}
+const colorsOf = p => [p.color, '#ffffff', p.bg];
+async function perform(p, text){
+  p.fig.animating = true; clearChips(p);
+  try { await comeOut(p); await doPerform(p, text); } finally { p.fig.animating = false; renderScene(); }
+}
+async function comeOut(p){
+  if(!p.fig.inRoom) return;
+  p.fig.inRoom = false; p.fig.x = p.fig.home; face(p, 1); placeFig(p);
+  p.fig.g.classList.remove('away'); p.fig.door.querySelector('.doorSign').setAttribute('opacity', 0);
+  await sleep(450);
+}
+
+/* ---------- each person's load: it moves basket → washer → basket (wet) → dryer → basket (dry) → put away ----------
+   p.load = null                         dirty laundry in their basket (everyone starts like this)
+          | { stage:'washing'|'drying', at:'W1'|'D1' }   inside a machine
+          | { stage:'wet'|'dry', at:'hands' }             back in their basket
+          | { stage:'wet'|'dry', at:'lf' }                someone moved it to Lost & Found            */
+const basketKind = p => !p.load ? 'dirty' : p.load.at === 'hands' ? p.load.stage : null;
+function setBasket(p, kind){                                  // kind: 'dirty' | 'wet' | 'dry' | 'empty' | null
+  const g = p.fig.g, load = g.querySelector('.basketG .load');
+  pose(p, 'carry', !!kind); pose(p, 'full', !!kind && kind !== 'empty');
+  if(p.fig.kind === kind) return; p.fig.kind = kind;
+  const cols = kind === 'dirty' ? [p.dark, '#d9d2c3', p.color] : colorsOf(p);
+  let h = cols.map((c,k)=>`<ellipse cx="${26+k*9}" cy="-66" rx="8" ry="5" fill="${c}" stroke="rgba(0,0,0,.18)"/>`).join('');
+  if(kind === 'dirty') h += `<g fill="none" stroke="#8fae3a" stroke-width="2" stroke-linecap="round" class="stink"><path d="M24-76q3-4 0-8t0-8"/><path d="M36-78q3-4 0-8t0-8"/><path d="M47-76q3-4 0-8t0-8"/></g><circle cx="30" cy="-64" r="1.6" fill="#7a6a4a"/><circle cx="41" cy="-67" r="1.4" fill="#7a6a4a"/>`;
+  if(kind === 'wet')   h += `<g fill="#5cc8ff" class="drips"><path d="M24-58q2 4 0 6q-2-2 0-6z"/><path d="M36-56q2 4 0 6q-2-2 0-6z"/><path d="M48-58q2 4 0 6q-2-2 0-6z"/></g>`;
+  if(kind === 'dry')   h += `<g class="sparkle" font-size="10"><text x="18" y="-76">✨</text><text x="44" y="-80">✨</text></g>`;
+  load.innerHTML = h;
+}
+const clothesFor = (p, kind) => kind === 'dirty' ? [p.dark, '#d9d2c3', p.color] : colorsOf(p);
+
+async function goTo(p, id){ await walkTo(p, STAND[id].x - STAND[id].dir * p.fig.i * 26); face(p, STAND[id].dir); }
+async function collect(p, id, cmdText){                       // take own clothes out of a machine into the basket
+  setBasket(p, 'empty');
+  await goTo(p, id);
+  await openDoor(id); pose(p, 'reach', true);
+  hold[id] = { loaded:false, spinning:false }; sceneSig[id] = ''; renderSceneMachine(id);
+  const stage = id === 'W1' ? 'wet' : 'dry';
+  await flyClothes(p, MX[id].door, basketPos(p), colorsOf(p));
+  p.load = { stage, at:'hands' }; setBasket(p, stage); pose(p, 'reach', false);
+  await closeDoor(id);
+  await say(p, cmdText);
+  delete hold[id]; sceneSig[id] = ''; renderSceneMachine(id);
+}
+async function fetchFromLostFound(p){
+  setBasket(p, 'empty');
+  await walkTo(p, LF.x - 60); face(p, 1); pose(p, 'reach', true);
+  await flyClothes(p, [LF.x, 370], basketPos(p), colorsOf(p));
+  p.load = { stage: lostFound.stage || 'wet', at:'hands' }; lostFound = null; renderLostFound();
+  pose(p, 'reach', false); setBasket(p, p.load.stage);
+}
+async function finishHome(p){
+  await walkHome(p);
+  if(p.load?.at === 'hands' && p.load.stage === 'dry'){       // clean clothes put away → next week's dirty basket
+    await sleep(600); bubble(p, '👕 Clean clothes put away!'); await sleep(900); p.load = null; setBasket(p, 'dirty');
+  }
+}
+
+async function doPerform(p, text){
+  const [c, a] = text.trim().toUpperCase().split(/\s+/);
+  if(['START','USE','JOIN'].includes(c)){
+    const id = a && a.startsWith('D') ? 'D1' : 'W1';
+    if(id === 'D1'){
+      // the dryer only takes this person's own washed clothes
+      if(p.load?.at === 'W1'){
+        const w = state.db.W1;
+        if(w.user?.phone === p.phone && w.state === 'inuse'){ bubble(p, '⏳ My clothes are still washing!'); return; }
+        await collect(p, 'W1', 'DONE WASHER');                  // grab them from the washer first
+        bubble(p, '💧 Now to the dryer!'); await sleep(500);
+      } else if(p.load?.at === 'lf'){
+        await fetchFromLostFound(p); bubble(p, '😅 Found them — to the dryer!'); await sleep(400);
+      }
+      if(!(p.load?.at === 'hands' && p.load.stage === 'wet')){
+        bubble(p, p.load?.at === 'D1' ? '⏳ Already drying!' : '🤔 Nothing washed to dry — wash first!'); return;
+      }
+    } else if(p.load && p.load.at !== 'hands'){
+      bubble(p, p.load.at === 'lf' ? '😬 My clothes are in Lost & Found' : `⏳ My load is already in the ${p.load.at === 'W1' ? 'washer' : 'dryer'}`); return;
+    }
+    const kind = basketKind(p) || 'dirty';
+    setBasket(p, kind);
+    await goTo(p, id);
+    await scanAnim(p, id);
+    await say(p, text);
+    pose(p, 'scan', false);
+    const m = state.db[id];
+    if(m.user?.phone === p.phone && m.state === 'inuse'){
+      hold[id] = { loaded:false, spinning:false }; renderSceneMachine(id);
+      await openDoor(id); pose(p, 'reach', true);
+      setBasket(p, 'empty');
+      await flyClothes(p, basketPos(p), MX[id].door, clothesFor(p, kind));
+      p.load = { stage: id === 'W1' ? 'washing' : 'drying', at:id };
+      hold[id] = { loaded:true, spinning:false }; sceneSig[id] = ''; renderSceneMachine(id);
+      await closeDoor(id);
+      await pressStart(p, id);
+      delete hold[id]; sceneSig[id] = ''; renderSceneMachine(id);
+      setBasket(p, null);
+      bubble(p, id === 'D1' ? '🔥 Drying my load!' : '🫧 Washing!');
+    } else {
+      const pos = m.queue.findIndex(u => u.phone === p.phone);
+      bubble(p, pos >= 0 ? `🙋 #${pos + 1} in line — back to my room` : '🤔 Hmm…');
+    }
+    await walkHome(p);
+    return;
+  }
+  if(c === 'DONE'){
+    const mine = Object.keys(state.db).filter(k => state.db[k].user?.phone === p.phone && ['done','inuse'].includes(state.db[k].state));
+    const id = (a && mine.find(k => (a.startsWith('D') ? 'D1' : 'W1') === k)) || mine.find(k => state.db[k].state === 'done') || mine[0]
+            || Object.keys(state.db).find(k => state.db[k].leftover?.phone === p.phone);
+    if(id){
+      await collect(p, id, text);
+      bubble(p, id === 'W1' ? '💧 Washed! Dryer next' : '✨ Clean & dry!');
+      await finishHome(p);
+    } else if(lostFound?.phone === p.phone){
+      await fetchFromLostFound(p);
+      bubble(p, '😅 Found them, thanks!');
+      await finishHome(p);
+    } else { bubble(p, '📱 …'); await say(p, text); }
+    return;
+  }
+  if(c === 'MOVED'){
+    const other = k => { const m = state.db[k]; return (m.leftover && m.leftover.phone !== p.phone) || (m.state === 'done' && m.user.phone !== p.phone); };
+    const opts = Object.keys(state.db).filter(other);
+    const id = (a && opts.find(k => (a.startsWith('D') ? 'D1' : 'W1') === k)) || opts[0];
+    if(id){
+      const m = state.db[id], owner = byPhone[(m.state === 'done' ? m.user : m.leftover).phone] || MYSTERY;
+      const stage = id === 'W1' ? 'wet' : 'dry';
+      await goTo(p, id);
+      await openDoor(id); pose(p, 'reach', true);
+      hold[id] = { loaded:false, spinning:false }; sceneSig[id] = ''; renderSceneMachine(id);
+      await flyClothes(p, MX[id].door, [LF.x, 368], [owner.color, '#fff', owner.bg || '#eee']);
+      lostFound = { phone: owner.phone, color: owner.color, bg: owner.bg, stage }; renderLostFound();
+      if(owner.fig) owner.load = { stage, at:'lf' };             // the owner's load now waits in Lost & Found
+      pose(p, 'reach', false); await closeDoor(id);
+      await say(p, text);
+      delete hold[id]; sceneSig[id] = ''; renderSceneMachine(id);
+      bubble(p, `🧺 Moved ${owner.name || 'their'} clothes`);
+      await walkHome(p);
+    } else { bubble(p, '🤷 Nothing to move'); await say(p, text); }
+    return;
+  }
+  if(c === 'QUEUE' || c === 'BOOK'){ bubble(p, '📅 How long is the wait?'); await say(p, text); return; }
+  if(c === 'YES' || c === 'CÓ'){ bubble(p, '👍 Book it!'); await say(p, text); return; }
+  if(c === 'MINE'){ bubble(p, "🙋 That's mine!"); await say(p, text); return; }
+  if(c === 'LEAVE'){ bubble(p, '👋 Leaving the line'); await say(p, text); return; }
+  bubble(p, '📱 Checking…'); await say(p, text);
+}
+
+/* ---------- quick replies: buttons for the answers the bot suggests ---------- */
+function clearChips(p){ p.el.querySelector('.chips').innerHTML = ''; }
+function showChips(p, text){
+  const found = [];
+  const re = /(?:Reply|reply|Send|Press|Trả lời|trả lời|Gửi|Nhấn)\s+((?:[A-ZÀ-ỸĐ]{2,}\s?)+)(?:(?:or|hoặc)\s+((?:[A-ZÀ-ỸĐ]{2,}\s?)+))?/g;
+  for(const m of text.matchAll(re)) [m[1], m[2]].forEach(x => { x = x && x.trim(); if(x && !found.includes(x)) found.push(x); });
+  const box = p.el.querySelector('.chips'); box.innerHTML = '';
+  found.slice(0, 3).forEach(x => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = '↩ ' + x; b.onclick = () => act(p, x); box.appendChild(b); });
+}
+/* the house dog 🐶 */
+const DOG = document.getElementById('dog');
+let dogT = 0, lastBark = 0;
+function dogSay(text, ms = 1800){
+  const b = DOG.querySelector('.dogBub'); b.innerHTML = '';
+  const g = el('g', { class:'sbub', transform:'translate(-6 -84)' }, b);
+  const r = el('rect', { rx:11, fill:'#fff', stroke:'#e5e5e5', 'stroke-width':2 }, g);
+  const t = el('text', { 'text-anchor':'middle', 'font-size':12.5, 'font-weight':900, fill:'#3c3c3c', y:4 }, g); t.textContent = text;
+  const bb = t.getBBox(); r.setAttribute('x', bb.x - 9); r.setAttribute('y', bb.y - 5); r.setAttribute('width', bb.width + 18); r.setAttribute('height', bb.height + 10);
+  DOG.classList.add('excited'); lastBark = Date.now();
+  clearTimeout(dogT); dogT = setTimeout(()=>{ b.innerHTML = ''; DOG.classList.remove('excited'); }, ms);
+}
+DOG.addEventListener('click', ()=> dogSay(['Woof! 🐾', 'Arf arf!', '🦴 Treat?', 'Wiggle wiggle!'][Math.floor(Math.random()*4)]));
+
+function renderLostFound(){
+  if(lostFound) setTimeout(()=> dogSay('*sniff sniff* 👃'), 200);
+  document.getElementById('lfLoad').innerHTML = !lostFound ? '' :
+    [lostFound.color, '#fff', lostFound.bg || '#eee'].map((c,k)=>`<ellipse cx="${-18+k*18}" cy="-4" rx="12" ry="7" fill="${c}" stroke="rgba(0,0,0,.15)"/>`).join('');
+}
+function renderScene(){
+  ['W1','D1'].forEach(renderSceneMachine);
+  if(Object.values(TAGS).some(t=>t.alarm) && Date.now() - lastBark > 3500) dogSay('WOOF! WOOF! 🚨', 2200);   // the dog hears the buzzer too
+  PEOPLE.forEach(p=>{
+    const s = situation(p);
+    const icon = { using:'🫧', done:'🧺', turn:'🟣', waiting:'⏳', alert:'🚨' }[s.pill] || '';
+    p.fig.g.querySelector('.tag').textContent = icon ? `${p.name} ${icon}` : p.name;
+    // waiting in line or load running → go chill in their room; come out when there's something to do
+    const chill = s.pill === 'waiting' || s.pill === 'using';
+    if(!p.fig.animating){
+      setBasket(p, basketKind(p));
+      if(chill && !p.fig.inRoom){
+        p.fig.inRoom = true; p.fig.g.classList.add('away');
+        p.fig.door.querySelector('.doorSign').setAttribute('opacity', 1);
+      } else if(!chill && p.fig.inRoom){
+        p.fig.inRoom = false; p.fig.x = p.fig.home; face(p, 1); placeFig(p);
+        p.fig.g.classList.remove('away'); p.fig.door.querySelector('.doorSign').setAttribute('opacity', 0);
+        const line = { turn:'🟣 My turn!', done:'🧺 My laundry is done!', alert:"🚨 Whose is that?" }[s.pill];
+        if(line) setTimeout(()=> bubble(p, line), 300);
+      }
+      if(p.fig.inRoom) p.fig.door.querySelector('.sign2').textContent = s.st;
+    }
+    const tg = p.fig.g.querySelector('.tagG rect'), w = Math.max(64, p.name.length * 7.5 + (icon ? 22 : 0) + 22);
+    tg.setAttribute('x', -w/2); tg.setAttribute('width', w);
+  });
+}
+
+/* ---------- background music: a cheerful laundromat / supermarket loop, made live with Web Audio ---------- */
+const Music = (()=>{
+  const BPM = 100, E = 60 / BPM / 2;                                   // one eighth note
+  const midi = n => 440 * Math.pow(2, (n - 69) / 12);
+  const CHORDS = [[60,64,67,71],[57,60,64,67],[62,65,69,72],[55,59,62,65]];   // Cmaj7 · Am7 · Dm7 · G7
+  const BASS   = [[36,43],[33,40],[38,45],[31,38]];
+  const MEL = [[72,null,76,79,null,77,76,null],[76,null,72,74,null,72,69,null],
+               [74,null,77,81,null,79,77,null],[79,77,76,74,null,71,74,null]];
+  let ctx, out, timer, step = 0, next = 0, on = false;
+  function tone(n, t, dur, type, vol){
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.value = midi(n); o.connect(g); g.connect(out);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  function shaker(t, vol){
+    const b = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate), d = b.getChannelData(0);
+    for(let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+    const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    f.type = 'highpass'; f.frequency.value = 6000; g.gain.value = vol;
+    src.buffer = b; src.connect(f); f.connect(g); g.connect(out); src.start(t);
+  }
+  function schedule(){
+    while(next < ctx.currentTime + 0.2){
+      const bar = Math.floor(step / 8) % 4, e = step % 8;
+      if(e === 0 || e === 3) CHORDS[bar].forEach(n => tone(n, next, E * 2.6, 'triangle', 0.028));   // soft e-piano, bossa push
+      if(e === 0) tone(BASS[bar][0], next, E * 1.8, 'sine', 0.13);
+      if(e === 4) tone(BASS[bar][1], next, E * 1.8, 'sine', 0.11);
+      const m = MEL[bar][e]; if(m) tone(m, next, E * 0.9, 'sine', 0.045);
+      shaker(next, e % 2 ? 0.035 : 0.06);
+      next += E; step++;
+    }
+  }
+  function start(){
+    ctx = ctx || new AudioContext(); ctx.resume();
+    if(!out){                                                          // mellow tone + a little "big store" echo
+      const lp = ctx.createBiquadFilter(), d = ctx.createDelay(), fb = ctx.createGain(), master = ctx.createGain();
+      lp.type = 'lowpass'; lp.frequency.value = 2800; d.delayTime.value = 0.28; fb.gain.value = 0.22; master.gain.value = 0.7;
+      out = ctx.createGain(); out.connect(lp); lp.connect(master); lp.connect(d); d.connect(fb); fb.connect(d); d.connect(master); master.connect(ctx.destination);
+    }
+    next = ctx.currentTime + 0.05; timer = setInterval(schedule, 25); on = true; paint();
+  }
+  function stop(){ clearInterval(timer); on = false; paint(); }
+  function paint(){ document.getElementById('musicBtn').textContent = on ? '🎵 On' : '🎵 Off'; }
+  function toggle(){ on ? stop() : start(); try { localStorage.setItem('washbot-music', on ? 'on' : 'off'); } catch {} }
+  // browsers only allow sound after a click, so a saved "on" starts at the first click on the page
+  let want = false; try { want = localStorage.getItem('washbot-music') === 'on'; } catch {}
+  if(want) addEventListener('pointerdown', function first(e){ removeEventListener('pointerdown', first); if(!on && e.target.id !== 'musicBtn') start(); });
+  return { toggle };
+})();
+
+/* click a machine's tag (or its big LCD) → open the tag view for that machine */
+document.addEventListener('click', e=>{ const t = e.target.closest('[data-tag]'); if(t) window.open('/device#' + t.dataset.tag, 'laundrybot-tags'); });
+
+/* the tag's vibration sensor, simulated */
+document.addEventListener('click', async e=>{
+  const b = e.target.closest('[data-vibe]'); if(!b) return;
+  await post(`/api/tags/${b.dataset.vibe}/vibration`, { running: b.dataset.on === '1' });
+});
+
+/* the tag's buzzer, simulated with the browser's audio */
+let alarmOn = false, soundOn = true, audio = null;
+try { soundOn = localStorage.getItem('washbot-sound') !== 'off'; } catch {}
+function toggleSound(){
+  soundOn = !soundOn;
+  try { localStorage.setItem('washbot-sound', soundOn ? 'on' : 'off'); } catch {}
+  document.getElementById('soundBtn').textContent = soundOn ? '🔊 On' : '🔈 Off';
+}
+document.getElementById('soundBtn').textContent = soundOn ? '🔊 On' : '🔈 Off';
+function beep(freq, at){
+  const o = audio.createOscillator(), g = audio.createGain();
+  o.type = 'square'; o.frequency.value = freq; o.connect(g); g.connect(audio.destination);
+  g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.08, at + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.18);
+  o.start(at); o.stop(at + 0.2);
+}
+setInterval(()=>{
+  if(!alarmOn || !soundOn) return;
+  try { audio = audio || new AudioContext(); const t = audio.currentTime; beep(880, t); beep(660, t + 0.22); } catch {}
+}, 1000);
+
+register().then(()=> fetch('/dev/state')).then(r=>r.json()).then(r=>{ seq = r.messages.reduce((a,m)=>Math.max(a,m.seq),0); poll(); });
+setInterval(poll, 1500);
+</script>
+</body>
+</html>
