@@ -1,0 +1,4 @@
+{"version":"0.0.1","configurations":[
+{"name":"bot","runtimeExecutable":"npm","runtimeArgs":["--prefix","bot","run","dev"],"port":3000},
+{"name":"site","runtimeExecutable":"python3","runtimeArgs":["-m","http.server","8765","--directory","site"],"port":8765}
+]}
