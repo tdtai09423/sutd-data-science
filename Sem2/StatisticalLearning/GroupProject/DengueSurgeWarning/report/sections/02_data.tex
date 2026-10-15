@@ -1,0 +1,19 @@
+\section{Data}
+\label{sec:data}
+\subsection{Dengue cases}
+Weekly notified dengue fever and dengue haemorrhagic fever (DHF) cases from the
+Ministry of Health weekly infectious disease bulletin (data.gov.sg), 2012--2022.
+\todo{number of weeks, missing weeks, note on epidemiological weeks.}
+
+\subsection{Weather}
+Daily rainfall, temperature and relative humidity for Singapore from the Open-Meteo
+historical archive, aggregated to the same weeks.
+\todo{justify source; compare with NEA Changi station if time.}
+
+\begin{figure}[h]
+  \centering
+  \IfFileExists{../pipeline/outputs/figures/eda_cases_timeseries.png}{
+    \includegraphics[width=\textwidth]{eda_cases_timeseries.png}}{\fbox{figure pending: run pipeline}}
+  \caption{Weekly dengue cases in Singapore.}
+  \label{fig:cases}
+\end{figure}

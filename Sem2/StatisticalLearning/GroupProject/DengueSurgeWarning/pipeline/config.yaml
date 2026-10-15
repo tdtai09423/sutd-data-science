@@ -1,0 +1,62 @@
+# Dengue surge warning - pipeline configuration.
+# Edit values here between iterations instead of touching code.
+
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed
+  outputs: outputs
+
+datagov:
+  # Optional: put an API key in this env variable for higher rate limits.
+  api_key_env: DATAGOV_API_KEY
+  datasets:
+    moh_weekly_bulletin:          # MAIN target source, 2012-2022
+      id: d_ca168b2cb763640d72c4600a68f9909e
+      format: csv
+    moh_dengue_dhf_2014_2018:     # cross-check
+      id: d_ac1eecf0886ff0bceefbc51556247015
+      format: csv
+    nea_rh_monthly:               # Changi monthly mean relative humidity
+      id: d_e3b1111a26b2aefef4f386c068d4ca5d
+      format: csv
+    nea_dengue_clusters:          # current snapshot only, saved with a date stamp
+      id: d_dbfabf16158d1b0e1c420627c0819168
+      format: geojson
+      snapshot: true
+
+weather:
+  provider: open_meteo
+  latitude: 1.3521
+  longitude: 103.8198
+  start_date: "2011-06-01"   # earlier than case data so long weather lags exist
+  end_date: null             # null = yesterday
+  daily:
+    - precipitation_sum
+    - temperature_2m_mean
+    - temperature_2m_max
+    - temperature_2m_min
+    - relative_humidity_2m_mean
+
+build:
+  dengue_regex: "dengue"     # diseases matching this (case-insensitive) are summed into `cases`
+
+features:
+  case_lags: [1, 2, 3, 4, 6, 8]      # lag 0 (current week) is always included
+  rolling_windows: [4, 8]
+  weather_vars: [rain_sum, rain_days, temp_mean, temp_max, temp_min, rh_mean]
+  weather_lags: [0, 2, 4, 6, 8, 10, 12]
+
+targets:
+  horizons: [1, 2, 4]          # weeks ahead
+  threshold:                   # target A: y[t+h] > mean + k*sd of the past `window` weeks
+    window: 52
+    k: 2.0                     # 1.5 gave ~23% prevalence on real data; 2.0 gives ~19%
+  growth:                      # target B: y[t+h] >= (1+pct[h])*y[t] and y[t+h] >= min_cases
+    pct: {1: 0.25, 2: 0.30, 4: 0.45}   # per horizon (fixed 0.25 gave 12/20/28%)
+    min_cases: 50
+
+model:
+  first_test_year: 2017        # rolling-origin CV: each year from here on is a test fold
+  decision_threshold: 0.5
+  random_state: 42

@@ -1,0 +1,23 @@
+\section{Methods}
+\label{sec:methods}
+\subsection{Surge definitions}
+Let $y_t$ be the cases in week $t$ and $h$ the forecast horizon.
+\begin{itemize}
+  \item \textbf{Threshold (A):} $S^{A}_{t,h} = \mathbb{1}\{y_{t+h} > \mu_t + k\,\sigma_t\}$,
+        where $\mu_t,\sigma_t$ are the mean and standard deviation of the previous $W=52$ weeks.
+  \item \textbf{Growth (B):} $S^{B}_{t,h} = \mathbb{1}\{y_{t+h} \ge (1+p)\,y_t \;\wedge\; y_{t+h}\ge m\}$.
+\end{itemize}
+
+\subsection{Predictors}
+All predictors are known at week $t$: lagged log cases, rolling means, recent growth,
+seasonal terms $\sin/\cos$ of week-of-year, and weather lagged 0--12 weeks.
+
+\subsection{Models}
+Logistic regression (unpenalised and $\ell_1$), a depth-3 classification tree,
+random forest, gradient boosting, and Poisson count regressions whose forecasts are
+converted to alarms with the same rule that defines the target.
+
+\subsection{Validation and model selection}
+Rolling-origin evaluation: each year from 2017 is a test fold, trained on all earlier
+weeks, with the last $h$ weeks purged to avoid target leakage. Metrics: ROC-AUC,
+PR-AUC (preferred under class imbalance), Brier score, precision, recall and false alarm rate.

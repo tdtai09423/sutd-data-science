@@ -1,0 +1,37 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage[round]{natbib}
+\usepackage{xcolor}
+
+% Figures produced by the pipeline are read directly from its output folder.
+\graphicspath{{figures/}{../pipeline/outputs/figures/}}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\title{Dengue Surge Warning for Singapore:\\
+Predicting Weekly Case Surges from Surveillance and Weather Data}
+\author{\todo{Author name}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\todo{Write last. 150--200 words: problem, data, two surge definitions, models compared, main result, implication.}
+\end{abstract}
+
+\input{sections/01_introduction}
+\input{sections/02_data}
+\input{sections/03_methods}
+\input{sections/04_results}
+\input{sections/05_discussion}
+\input{sections/06_conclusion}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+\end{document}

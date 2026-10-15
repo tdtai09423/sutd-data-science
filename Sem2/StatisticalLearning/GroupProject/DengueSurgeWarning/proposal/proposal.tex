@@ -1,0 +1,75 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage[round]{natbib}
+\usepackage{xcolor}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\title{Project Proposal: Dengue Surge Warning\\
+\large Public health -- Intermediate level -- Logistic regression, regression, model selection, trees}
+\author{\todo{Author name}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Background and motivation}
+Dengue is endemic in Singapore with large epidemic years. An early signal that cases
+will rise sharply in the coming weeks would help the National Environment Agency and
+hospitals act before the peak. Previous Singapore studies used weather and past cases
+to forecast incidence \citep{hii2012forecast,shi2016three}.
+
+\section{Objectives}
+\begin{enumerate}
+  \item Build a reproducible weekly national dataset of dengue cases and weather (2012--2022).
+  \item Define and compare two operational surge definitions (threshold exceedance and growth).
+  \item Predict surges 1, 2 and 4 weeks ahead with logistic regression, count regression and tree-based models.
+  \item Select models with time-respecting validation and assess the added value of weather.
+\end{enumerate}
+
+\section{Data}
+\begin{itemize}
+  \item MOH Weekly Infectious Disease Bulletin, data.gov.sg (dengue fever and DHF, 2012--2022).
+  \item Open-Meteo historical weather archive (rainfall, temperature, humidity), daily.
+  \item Supporting: NEA dengue clusters (spatial snapshot), NEA humidity records, OpenDengue \citep{clarke2024opendengue}.
+\end{itemize}
+
+\section{Methodology}
+\paragraph{Targets.} Binary surge indicators at horizons $h\in\{1,2,4\}$ weeks under
+two definitions; count of cases $y_{t+h}$ for regression models.
+\paragraph{Predictors.} Lagged cases and growth, seasonality, weather lagged 0--12 weeks.
+\paragraph{Models.} Logistic regression (with $\ell_1$ selection), Poisson regression,
+decision tree, random forest, gradient boosting.
+\paragraph{Validation.} Rolling-origin cross-validation by year with purging; ROC-AUC,
+PR-AUC, Brier score, recall and false alarm rate.
+
+\section{Expected outcomes}
+A comparison of surge definitions and models, an estimate of the useful warning lead
+time, and an interpretable model (coefficients / tree rules) that could support decisions.
+
+\section{Timeline}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Week & Task \\ \midrule
+1 & Data collection, inspection, weekly dataset \\
+2 & Exploratory analysis, target definitions \\
+3--4 & Baseline and logistic models, feature selection \\
+5 & Tree-based models, count regression \\
+6 & Model selection, interpretation, robustness \\
+7--8 & Report writing \\ \bottomrule
+\end{tabular}
+
+\section{Risks}
+\begin{itemize}
+  \item Case data on data.gov.sg ends in 2022: extend from NEA/CDA bulletins or OpenDengue if needed.
+  \item Few epidemic years means few positive cases: use PR-AUC, simple models, regularisation.
+  \item Reporting and behaviour changes (e.g.\ 2020 COVID-19 period, Wolbachia releases): sensitivity analysis.
+\end{itemize}
+
+\bibliographystyle{plainnat}
+\bibliography{../report/references}
+\end{document}

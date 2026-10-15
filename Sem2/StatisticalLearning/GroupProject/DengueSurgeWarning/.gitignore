@@ -1,0 +1,15 @@
+pipeline/.venv/
+pipeline/data/raw/*
+pipeline/data/interim/*
+pipeline/data/processed/*
+!pipeline/data/**/.gitkeep
+__pycache__/
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.toc

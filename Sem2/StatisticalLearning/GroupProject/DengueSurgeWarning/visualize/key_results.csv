@@ -1,0 +1,7 @@
+target,prevalence,best_model,best_pr_auc,best_roc_auc,precision@alarm,recall@alarm,naive_persistence_pr_auc
+surge_thr_h1,0.186,poisson_glm (full),0.944,0.983,0.862,0.862,0.96
+surge_thr_h2,0.186,poisson_glm (full),0.863,0.963,0.662,0.879,0.916
+surge_thr_h4,0.204,logit (cases),0.815,0.927,0.816,0.635,0.851
+surge_grow_h1,0.135,poisson_glm (full),0.288,0.664,0.316,0.286,
+surge_grow_h2,0.174,random_forest (full),0.269,0.651,0.0,0.0,
+surge_grow_h4,0.214,logit_l1 (full),0.329,0.619,0.25,0.015,
