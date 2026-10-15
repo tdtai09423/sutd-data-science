@@ -1,7 +1,16 @@
-target,prevalence,best_model,best_pr_auc,best_roc_auc,precision@alarm,recall@alarm,naive_persistence_pr_auc
-surge_thr_h1,0.186,poisson_glm (full),0.944,0.983,0.862,0.862,0.96
-surge_thr_h2,0.186,poisson_glm (full),0.863,0.963,0.662,0.879,0.916
-surge_thr_h4,0.204,logit (cases),0.815,0.927,0.816,0.635,0.851
-surge_grow_h1,0.135,poisson_glm (full),0.288,0.664,0.316,0.286,
-surge_grow_h2,0.174,random_forest (full),0.269,0.651,0.0,0.0,
-surge_grow_h4,0.214,logit_l1 (full),0.329,0.619,0.25,0.015,
+target,positives,prevalence,seasonal_pr_auc,persistence_pr_auc,best_model,best_pr_auc,best_ci,p_best_beats_persistence,best_brier,best_recall,best_precision,best_alarms_per_year
+surge_thr_h1,58,0.186,0.225,0.956,logit[cases],0.938,"[0.86, 0.98]",0.15,0.039,0.914,0.803,11.038
+surge_thr_h2,58,0.186,0.22,0.908,logit[cases],0.881,"[0.69, 0.95]",0.138,0.056,0.897,0.754,11.577
+surge_thr_h4,62,0.201,0.217,0.86,ridge_logcount[full],0.836,"[0.59, 0.94]",0.37,0.072,0.903,0.622,15.198
+surge_thronset_h1,8,0.031,0.036,0.302,ridge_logcount[full],0.303,"[0.06, 0.78]",0.524,0.032,0.5,0.174,4.652
+surge_thronset_h2,12,0.047,0.053,0.251,logit[cases],0.372,"[0.12, 0.60]",0.856,0.037,0.417,0.385,2.639
+surge_thronset_h4,16,0.063,0.057,0.296,logit[full],0.311,"[0.09, 0.95]",0.58,0.071,0.5,0.444,3.683
+surge_seas_h1,61,0.196,0.205,0.973,ridge_logcount[full],0.976,"[0.91, 1.00]",0.688,0.024,1.0,0.772,13.212
+surge_seas_h2,61,0.196,0.205,0.948,poisson_glm[full],0.963,"[0.84, 0.99]",0.862,0.034,0.984,0.732,13.758
+surge_seas_h4,61,0.197,0.218,0.85,poisson_glm[full],0.906,"[0.58, 0.97]",0.95,0.051,0.967,0.663,15.029
+surge_seasonset_h1,7,0.028,0.034,0.513,poisson_glm[full],0.938,"[0.88, 1.00]",0.92,0.012,1.0,0.318,4.574
+surge_seasonset_h2,9,0.036,0.034,0.429,ridge_logcount[full],0.742,"[0.53, 1.00]",0.937,0.022,0.889,0.308,5.427
+surge_seasonset_h4,16,0.065,0.065,0.372,ridge_logcount[full],0.656,"[0.48, 0.95]",0.992,0.04,0.75,0.333,7.575
+surge_grow_h1,42,0.135,0.181,0.166,ridge_logcount[full],0.259,"[0.19, 0.42]",0.97,0.117,0.476,0.263,12.711
+surge_grow_h2,55,0.177,0.279,0.191,random_forest[full],0.274,"[0.20, 0.41]",0.96,0.138,0.6,0.28,19.798
+surge_grow_h4,65,0.21,0.337,0.182,lasso_logit[full],0.331,"[0.20, 0.48]",0.964,0.16,0.631,0.318,21.784

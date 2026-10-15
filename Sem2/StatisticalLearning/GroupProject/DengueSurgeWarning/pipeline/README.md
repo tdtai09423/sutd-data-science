@@ -36,12 +36,20 @@ Each iteration: run a stage -> send back its `*_summary.md` (+ figures) -> decid
 | 4+ | edits from results | same | tuning, feature selection, robustness, spatial extension |
 
 ## Design notes
-- Surge A (threshold): y[t+h] > mean + k*sd of the previous 52 weeks.
-- Surge B (growth): y[t+h] >= (1+pct)*y[t] and y[t+h] >= min_cases.
-- All predictors use information up to week t only; CV trains on all weeks before each
-  test year and drops the last h training weeks (no target overlap).
-- Count regressions (Poisson GLM, Poisson GBM) are turned into alarms with the same rule
-  as the target, so classification and regression are compared on equal terms.
-- MOH epi weeks (Sun-Sat) are mapped to ISO weeks (Mon-Sun), a 1-day shift, applied
-  identically to weather.
-- `prior` model is a reference for PR-AUC / Brier only (its pooled ROC-AUC is not meaningful).
+- Target series: weekly dengue fever (DF). DHF is kept separate (under 1 case/week on average).
+- Surge definitions (fixed before fitting; all thresholds known at forecast week t):
+  - A `thr`: y[t+h] > mean + k*sd of the previous 52 weeks.
+  - S `seas`: y[t+h] > q-th percentile of the same season (+-17 days) in earlier years.
+  - B `grow`: y[t+h] >= (1+pct[h])*y[t] and y[t+h] >= min_cases.
+  - `thronset` / `seasonset`: A / S restricted to weeks where y[t] is not yet above the threshold
+    (genuine early warning; few positives).
+- Validation: rolling origin by week with an expanding window from `first_test_year`; models are
+  refitted every `refit_every` weeks and training rows are purged so every label is known at the origin.
+- Baselines: prior, seasonal (historical surge rate for the week of year), persistence
+  (logistic on the current distance to the threshold, or on last week's growth for B).
+- Count regressions (Poisson GLM, ridge on log counts) are turned into P(surge) with a log-normal
+  predictive distribution, so every model is scored on PR-AUC, Brier and calibration.
+- Alarm when P >= 1/(1+cost_ratio); `alarm_cost_tradeoff.csv` shows other cost ratios.
+- 95% CIs by moving-block bootstrap (26-week blocks) of the out-of-sample predictions.
+- Reporting-delay sensitivity: h=1 targets re-run with week t's counts treated as unknown.
+- MOH epi weeks (Sun-Sat, MMWR numbering) are keyed by the following Monday; weather uses Mon-Sun weeks.

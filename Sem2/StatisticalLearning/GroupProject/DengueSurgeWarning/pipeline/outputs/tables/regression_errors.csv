@@ -1,0 +1,7 @@
+target,model,mae,rmse
+surge_thr_h1,poisson_glm[full],44.1,94.0
+surge_thr_h1,ridge_logcount[full],41.9,83.8
+surge_thr_h2,poisson_glm[full],63.3,124.6
+surge_thr_h2,ridge_logcount[full],56.4,104.5
+surge_thr_h4,poisson_glm[full],108.5,200.7
+surge_thr_h4,ridge_logcount[full],87.2,151.8

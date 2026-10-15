@@ -40,23 +40,38 @@ weather:
 
 build:
   dengue_regex: "dengue"     # diseases matching this (case-insensitive) are summed into `cases`
+  target_series: dengue_fever  # series used for targets/predictors (DHF kept separate)
 
 features:
   case_lags: [1, 2, 3, 4, 6, 8]      # lag 0 (current week) is always included
   rolling_windows: [4, 8]
   weather_vars: [rain_sum, rain_days, temp_mean, temp_max, temp_min, rh_mean]
   weather_lags: [0, 2, 4, 6, 8, 10, 12]
+  report_delay: 0                    # 1 = week t's counts treated as not yet available
 
 targets:
   horizons: [1, 2, 4]          # weeks ahead
   threshold:                   # target A: y[t+h] > mean + k*sd of the past `window` weeks
     window: 52
     k: 2.0                     # 1.5 gave ~23% prevalence on real data; 2.0 gives ~19%
+  seasonal:                    # target seas: y[t+h] > q-quantile of the same season in earlier years
+    q: 0.90
+    halfwidth_days: 17         # +-2.5 weeks around the same day of year
+    exclude_recent_days: 182   # only weeks > 26 weeks before t+h (so known at t)
+    min_years: 2
+  onset: [thr, seas]           # also build "<kind>onset" targets (y[t] not yet above threshold)
   growth:                      # target B: y[t+h] >= (1+pct[h])*y[t] and y[t+h] >= min_cases
     pct: {1: 0.25, 2: 0.30, 4: 0.45}   # per horizon (fixed 0.25 gave 12/20/28%)
     min_cases: 50
 
 model:
-  first_test_year: 2017        # rolling-origin CV: each year from here on is a test fold
-  decision_threshold: 0.5
+  first_test_year: 2017        # rolling-origin by week: forecasts are evaluated from this year on
+  refit_every: 4               # weeks between refits; forecasts are still made every week (1 = refit weekly, ~30 min)
+  cost_ratio: 4                # cost(missed surge) / cost(false alarm) -> alarm if P >= 1/(1+ratio)
+  cost_ratio_grid: [1, 2, 4, 9]
+  bootstrap: 500               # moving-block bootstrap draws for CIs
+  delay_sensitivity: true
+  delay_sensitivity_targets: [surge_thr_h1, surge_seas_h1, surge_grow_h1]
+  targets: null                # null = all; or a list to restrict
+  models: null                 # null = all; baselines are always kept
   random_state: 42

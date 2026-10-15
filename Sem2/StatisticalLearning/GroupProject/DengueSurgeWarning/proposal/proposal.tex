@@ -1,75 +1,94 @@
-\documentclass[11pt,a4paper]{article}
-\usepackage[margin=2.5cm]{geometry}
-\usepackage[utf8]{inputenc}
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=1.6cm,top=1.3cm,bottom=1.3cm]{geometry}
 \usepackage[T1]{fontenc}
+\usepackage{lmodern}
 \usepackage{amsmath}
-\usepackage{booktabs}
-\usepackage{hyperref}
-\usepackage[round]{natbib}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
 \usepackage{xcolor}
-\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\todo}[1]{\textcolor{red}{[#1]}}
 
-\title{Project Proposal: Dengue Surge Warning\\
-\large Public health -- Intermediate level -- Logistic regression, regression, model selection, trees}
-\author{\todo{Author name}}
-\date{\today}
+\titleformat{\section}{\normalsize\bfseries}{\thesection.}{0.4em}{}
+\titlespacing*{\section}{0pt}{5pt}{2pt}
+\setlist{nosep,leftmargin=1.2em}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{2pt}
+\pagestyle{empty}
 
 \begin{document}
-\maketitle
 
-\section{Background and motivation}
-Dengue is endemic in Singapore with large epidemic years. An early signal that cases
-will rise sharply in the coming weeks would help the National Environment Agency and
-hospitals act before the peak. Previous Singapore studies used weather and past cases
-to forecast incidence \citep{hii2012forecast,shi2016three}.
+\begin{center}
+{\large\bfseries Can Next Week's Dengue Surge Be Flagged Early? An Early-Warning Model for Singapore}\\[2pt]
+{\small Project 1.1 (public health, intermediate) \quad$\cdot$\quad Statistical Learning group project
+\quad$\cdot$\quad \todo{Group members}}
+\end{center}
 
-\section{Objectives}
-\begin{enumerate}
-  \item Build a reproducible weekly national dataset of dengue cases and weather (2012--2022).
-  \item Define and compare two operational surge definitions (threshold exceedance and growth).
-  \item Predict surges 1, 2 and 4 weeks ahead with logistic regression, count regression and tree-based models.
-  \item Select models with time-respecting validation and assess the added value of weather.
-\end{enumerate}
+\section{Question and motivation}
+Dengue is endemic in Singapore and arrives in irregular epidemic waves (e.g.\ 2013--14, 2019--20, 2022).
+\textbf{Primary question:} can recent dengue counts and lagged weather (rainfall, temperature, humidity)
+identify weeks with a materially elevated risk of a surge in the following week(s)? An early, calibrated
+risk signal can support inspection, communication and vector-control planning, even though the model
+does not establish what causes a surge. We frame the task as \emph{prediction}, not causal inference.
 
-\section{Data}
+\section{Data and curation}
 \begin{itemize}
-  \item MOH Weekly Infectious Disease Bulletin, data.gov.sg (dengue fever and DHF, 2012--2022).
-  \item Open-Meteo historical weather archive (rainfall, temperature, humidity), daily.
-  \item Supporting: NEA dengue clusters (spatial snapshot), NEA humidity records, OpenDengue \citep{clarke2024opendengue}.
+  \item \textbf{Cases:} MOH weekly dengue fever (DF) and dengue haemorrhagic fever (DHF), data.gov.sg, 2014--2018
+        (main analysis); MOH Weekly Infectious Disease Bulletin 2012--2022 for an extended robustness analysis
+        covering more outbreaks. DF is the target series; DHF is reported separately ($<$1 case/week on average).
+  \item \textbf{Weather:} NEA/MSS daily records (Changi), aggregated to epidemiological weeks and lagged 0--12 weeks;
+        reanalysis (Open-Meteo) only to fill gaps, cross-checked against NEA monthly series.
+  \item \textbf{Curation:} a complete epi-week calendar (Sun--Sat, MMWR numbering, incl.\ 53-week years);
+        datasets joined on overlapping weeks only; every predictor uses information available at forecast week $t$.
 \end{itemize}
 
-\section{Methodology}
-\paragraph{Targets.} Binary surge indicators at horizons $h\in\{1,2,4\}$ weeks under
-two definitions; count of cases $y_{t+h}$ for regression models.
-\paragraph{Predictors.} Lagged cases and growth, seasonality, weather lagged 0--12 weeks.
-\paragraph{Models.} Logistic regression (with $\ell_1$ selection), Poisson regression,
-decision tree, random forest, gradient boosting.
-\paragraph{Validation.} Rolling-origin cross-validation by year with purging; ROC-AUC,
-PR-AUC, Brier score, recall and false alarm rate.
-
-\section{Expected outcomes}
-A comparison of surge definitions and models, an estimate of the useful warning lead
-time, and an interpretable model (coefficients / tree rules) that could support decisions.
-
-\section{Timeline}
-\begin{tabular}{@{}ll@{}}
-\toprule
-Week & Task \\ \midrule
-1 & Data collection, inspection, weekly dataset \\
-2 & Exploratory analysis, target definitions \\
-3--4 & Baseline and logistic models, feature selection \\
-5 & Tree-based models, count regression \\
-6 & Model selection, interpretation, robustness \\
-7--8 & Report writing \\ \bottomrule
-\end{tabular}
-
-\section{Risks}
+\section{Surge definitions (fixed before any model is fitted)}
+For horizon $h\in\{1,2,4\}$ weeks ($h=1$ is primary) and DF counts $y_t$:
 \begin{itemize}
-  \item Case data on data.gov.sg ends in 2022: extend from NEA/CDA bulletins or OpenDengue if needed.
-  \item Few epidemic years means few positive cases: use PR-AUC, simple models, regularisation.
-  \item Reporting and behaviour changes (e.g.\ 2020 COVID-19 period, Wolbachia releases): sensitivity analysis.
+  \item \textbf{Seasonal percentile (S):} $y_{t+h} > Q_{0.90}$ of counts in the same season ($\pm$2.5 weeks) of earlier years.
+  \item \textbf{Historical threshold (A):} $y_{t+h} > \bar y_{t-51:t} + 2\,s_{t-51:t}$ (past 52 weeks).
+  \item \textbf{Week-on-week rise (B):} $y_{t+h} \ge (1+p_h)\,y_t$ and $y_{t+h}\ge 50$.
+  \item \textbf{Onset variants of A and S:} only weeks where $y_t$ is \emph{not yet} above the threshold, so that
+        the model is judged on genuine early warnings rather than on the persistence of an ongoing epidemic.
+\end{itemize}
+Thresholds are tuned once so that 10--20\% of weeks are surges (preliminary: A 19\%, S 19\%, B 12--18\%).
+
+\section{Methods}
+\begin{itemize}
+  \item \textbf{Baselines:} base rate; \emph{seasonal} (historical surge rate for that week of the year);
+        \emph{persistence} (current distance to the threshold, or last week's growth).
+  \item \textbf{Classification:} logistic regression with lagged cases and/or weather; $\ell_1$-regularised
+        logistic regression (penalty by forward-chaining CV) for variable selection; CART (depth 3, interpretable
+        rules); random forest.
+  \item \textbf{Count regression:} Poisson GLM and ridge regression on $\log(1+y)$, converted to $P(\text{surge})$
+        through a predictive distribution so that all models are compared on the same scale.
 \end{itemize}
 
-\bibliographystyle{plainnat}
-\bibliography{../report/references}
+\section{Validation and evaluation}
+Rolling-origin evaluation \emph{by week} with an expanding window: at each forecast week the model is trained only
+on weeks whose outcome is already known (purged by $h$), with no future weather or later case revisions in the
+predictors. We report \textbf{PR-AUC} (main metric, surges are rare), recall, precision and alarms per year at an
+alarm threshold set by the cost ratio of a missed surge to a false alarm, \textbf{calibration} (Brier score,
+reliability diagrams), 95\% block-bootstrap intervals, and the gain over the persistence and seasonal baselines.
+
+\section{Anticipated limitations (defence focus)}
+\begin{itemize}
+  \item \textbf{Reporting and revisions:} only final counts are public; sensitivity run assuming a 1-week reporting delay.
+  \item \textbf{Immunity and serotype shifts} (e.g.\ DENV-3 in 2020) change the case--weather relation; performance
+        is reported per test year.
+  \item \textbf{Few large outbreaks:} small effective sample; simple, regularised models and bootstrap intervals.
+  \item \textbf{Cost of false alarms:} alarm rules compared across cost ratios (1:1 to 9:1), expressed as alarms per year.
+\end{itemize}
+
+\section{Deliverables and timeline}
+Wk 1--2: data curation and surge definitions \;$\cdot$\; Wk 3--4: baselines, logistic and count models
+\;$\cdot$\; Wk 5: trees, regularisation, model selection \;$\cdot$\; Wk 6: robustness and defence analyses
+\;$\cdot$\; Wk 7--8: report and reproducible code (public GitHub pipeline).
+
+\vspace{2pt}
+{\footnotesize \textbf{References.}
+Hii~Y.L.\ et al.\ (2012), Forecast of dengue incidence using temperature and rainfall, \emph{PLoS NTD} 6(11):e1908.
+Shi~Y.\ et al.\ (2016), Three-month real-time dengue forecast models: an early warning system for outbreak alerts
+and policy decision support in Singapore, \emph{Environ.\ Health Perspect.} 124(9):1369--1375.\par}
+
 \end{document}

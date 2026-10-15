@@ -1,60 +1,66 @@
-# Visualize: kết quả chạy trên dữ liệu thật (Iteration 0 → 3)
+# Visualize: kết quả theo đề 1.1 của thầy
 
-Tạo lại toàn bộ (sau khi chạy `cd pipeline && python run.py all`):
+Tạo lại (sau `cd pipeline && python run.py all`):
 ```bash
 pipeline/.venv/bin/python visualize/make_visuals.py
 ```
 
-## Dữ liệu
-- Ca bệnh: MOH Weekly Infectious Disease Bulletin, Dengue Fever + DHF, 574 tuần (2012-W01 → 2022-W52), không thiếu tuần nào.
-- Thời tiết: Open-Meteo (Singapore), gộp theo tuần, 2011-06 → 2026-10.
-- Năm dịch lớn: 2013, 2014, 2019, **2020 (đỉnh 1792 ca/tuần)**, 2022. Năm thấp: 2017, 2018, 2021.
+## Thiết kế (bám theo đề)
+- **Chuỗi target:** Dengue Fever (DF) theo tuần, 2012–2022. DHF để riêng (dưới 1 ca/tuần, chỉ mô tả).
+- **Định nghĩa surge** (chốt trước khi fit), h = 1 là chính:
+  - **A threshold:** y[t+h] > mean + 2·sd của 52 tuần trước.
+  - **S seasonal p90:** y[t+h] > percentile thứ 90 của cùng mùa (±2.5 tuần) ở các năm trước (gợi ý của thầy).
+  - **B growth:** y[t+h] ≥ (1+pct)·y[t] và ≥ 50 ca (week-on-week rise).
+  - **A-onset / S-onset:** như A/S nhưng chỉ xét tuần mà y[t] **chưa** vượt ngưỡng, tức cảnh báo sớm thật sự.
+- **Baselines:** prior, seasonal (tỷ lệ surge lịch sử theo tuần trong năm), persistence (khoảng cách hiện tại tới ngưỡng).
+- **Mô hình:** logistic (cases / weather / cả hai), lasso logistic (chọn C bằng CV theo thời gian), CART depth 3,
+  random forest, Poisson GLM, ridge trên log counts. Hồi quy đếm được đổi thành P(surge).
+- **Validation:** rolling-origin theo tuần, expanding window, test 2017–2022, refit mỗi 4 tuần (`refit_every`),
+  purge h tuần. Báo động khi P ≥ 0.2 (bỏ lỡ một surge tốn gấp 4 lần một báo động giả).
+- **Metric:** PR-AUC kèm khoảng tin cậy 95% (block bootstrap 26 tuần), recall, precision, số báo động/năm,
+  Brier, calibration.
 
-## Cấu hình đã chốt (config.yaml)
-| | Định nghĩa | Tham số | Prevalence h=1/2/4 |
-|---|---|---|---|
-| A threshold | y[t+h] > mean + k·sd của 52 tuần trước | k = 2.0 (1.5 cho ~23%) | 0.19 / 0.19 / 0.20 |
-| B growth | y[t+h] ≥ (1+pct[h])·y[t] và ≥ 50 ca | pct = 0.25 / 0.30 / 0.45 | 0.12 / 0.17 / 0.18 |
+## Kết quả chính (`key_results.csv`, h = 1)
+| Target | Dương tính (test) | Persistence | Mô hình tốt nhất | PR-AUC [95% CI] |
+|---|---|---|---|---|
+| A threshold | 58 | 0.96 | logistic, cases | 0.94 [0.86, 0.98] |
+| S seasonal p90 | 61 | 0.97 | ridge log counts | 0.98 [0.91, 1.00] |
+| B growth | 42 | 0.17 | ridge log counts | 0.26 [0.19, 0.42] |
+| A-onset | 8 | 0.30 | ridge log counts | 0.30 [0.06, 0.78] |
+| S-onset | 7 | 0.51 | Poisson GLM | 0.94 [0.88, 1.00] |
 
-CV: rolling-origin theo năm, test 2017–2022, purge h tuần. Metric chính: PR-AUC (mức no-skill = prevalence).
-
-## Kết quả chính (`key_results.csv`)
-| Target | Mô hình tốt nhất | PR-AUC | Baseline "z-score tuần hiện tại" |
-|---|---|---|---|
-| A, h=1 | Poisson GLM → alarm | 0.94 | **0.96** |
-| A, h=2 | Poisson GLM → alarm | 0.86 | **0.92** |
-| A, h=4 | Logistic (chỉ biến ca bệnh) | 0.82 | **0.85** |
-| B, h=1 | Poisson GLM → alarm | 0.29 | (prior 0.11) |
-| B, h=2 | Random forest | 0.27 | (prior 0.15) |
-| B, h=4 | Lasso logistic | 0.33 | (prior 0.21) |
-
-## Diễn giải
-1. **Target A gần như "persistence"**: tuần đang vượt ngưỡng thì vài tuần sau vẫn vượt. Một quy tắc ngây thơ
-   (cảnh báo khi z-score tuần hiện tại cao) thắng mọi mô hình. → Muốn A có ý nghĩa cảnh báo sớm, cần đổi
-   thành **"onset"**: y[t] chưa vượt ngưỡng nhưng y[t+h] vượt (bước tiếp theo đề xuất).
-2. **Target B khó**: mọi mô hình chỉ hơn baseline một chút (PR-AUC 0.27–0.33 so với 0.11–0.21); ROC-AUC ~0.62–0.66.
-   Tăng trưởng ngắn hạn rất nhiễu.
-3. **Thời tiết đơn lẻ không có tín hiệu** cho A (PR-AUC = prevalence), có chút tín hiệu cho B ở h=4
-   (khớp với độ trễ sinh học muỗi/virus ~2–3 tháng; tương quan mạnh nhất ở lag 10–12 tuần, xem 04b).
-4. Mô hình đơn giản (logistic chỉ dùng lag ca bệnh, Poisson GLM) ≥ mô hình phức tạp (RF, GBM, tree).
-   Tree depth-3 kém nhất nhưng có luật dễ đọc (`pipeline/outputs/tables/tree_rules.txt`).
-5. Ở ngưỡng p ≥ 0.5, nhiều classifier cho target B không bao giờ báo động (recall = 0) → cần chọn ngưỡng
-   theo tỷ lệ báo động / tối ưu F1 trên tập train.
+## Diễn giải (dùng cho phần defence)
+1. **A và S dự báo được gần như hoàn hảo, nhưng chủ yếu nhờ persistence.** Một tuần đang vượt ngưỡng thì tuần
+   sau gần như chắc chắn vẫn vượt. Không mô hình nào thắng persistence một cách rõ ràng
+   (`p_better_than_persistence` thấp, hình 02, 03).
+2. **Giá trị thật nằm ở onset:** khi dịch *chưa* vượt ngưỡng, hồi quy đếm (Poisson GLM, ridge log)
+   phát hiện các tuần chớm vượt ngưỡng S tốt hơn hẳn persistence (PR-AUC 0.94 so với 0.51 ở h = 1,
+   0.64–0.74 ở h = 2–4). **Nhưng chỉ có 7–16 ca dương tính**, nên khoảng tin cậy rất rộng.
+   Đây chính là ý "limited number of large outbreaks" trong đề.
+3. **B growth khó:** mọi mô hình chỉ đạt PR-AUC 0.2–0.33. Ở h = 2–4, seasonal baseline ngang ngửa mô hình tốt nhất.
+4. **Thời tiết đơn lẻ yếu:** gần mức prior cho A và S. Thêm thời tiết vào số ca không cải thiện A/S, chỉ giúp chút ít
+   cho B ở h = 4 và S-onset ở h = 4.
+5. **Mô hình đơn giản là đủ:** logistic trên số ca và hồi quy đếm ≥ random forest và CART.
+6. **Trễ báo cáo 1 tuần** (hình 09): PR-AUC giảm vừa phải (A: 0.94 → 0.88 với logistic cases),
+   kết luận không đổi.
+7. **Chi phí báo động giả** (hình 06): với tỷ lệ 4:1, A/S có khoảng 11–13 báo động/năm với recall ≈ 0.75–0.8.
+   Còn B cần khoảng 13–20 báo động/năm mà chỉ bắt được khoảng một nửa số surge.
 
 ## Danh sách hình (`figures/`)
 | File | Nội dung |
 |---|---|
-| 01_cases_and_surge_labels.png | Chuỗi ca bệnh 2012–2022 + tuần được gán surge theo A và B |
-| 02_pr_auc_heatmap.png | PR-AUC của mọi mô hình × target (bảng tổng hợp chính) |
-| 03_pr_auc_by_horizon.png | PR-AUC theo horizon, so với no-skill và baseline persistence |
-| 04a_eda_seasonality.png | Mùa vụ theo tuần trong năm |
-| 04b_eda_weather_lag_corr.png | Tương quan ca bệnh với thời tiết theo lag |
-| 04c_eda_cases_vs_weather.png | Ca bệnh và thời tiết theo thời gian |
-| 05_pr_auc_by_year.png | PR-AUC theo từng năm test (độ ổn định) |
-| 06_top_features_h2.png | Biến quan trọng nhất (lasso và RF), h=2 |
-| 07a/07b_best_model_*.png | Xác suất dự báo của mô hình tốt nhất trên giai đoạn test |
+| 01_cases_and_surge_definitions.png | Chuỗi DF + 3 định nghĩa surge + onset (vòng đen) + DHF |
+| 02_pr_auc_ci_h1.png | PR-AUC kèm CI, h = 1, so với persistence và no-skill |
+| 03_pr_auc_vs_persistence_all_targets.png | Heatmap PR-AUC và mức hơn/kém persistence, mọi target |
+| 04_pr_auc_by_horizon.png | PR-AUC theo horizon cho từng định nghĩa |
+| 05_calibration_h1.png | Reliability diagram (mô hình tốt nhất, persistence, seasonal) |
+| 06_alarm_tradeoff_h1.png | Recall và số báo động/năm theo tỷ lệ chi phí 1:1 → 9:1 |
+| 07_pr_auc_by_year_h1.png | Độ ổn định theo năm test (2020: serotype DENV-3) |
+| 08_top_features_h1.png | Biến quan trọng (lasso, RF) |
+| 09_reporting_delay_sensitivity.png | Độ nhạy khi trễ báo cáo 1 tuần |
+| 10a–c_eda_*.png | Mùa vụ, tương quan có độ trễ với thời tiết |
+| 11_model_best_*_h1.png | Xác suất dự báo out-of-sample của mô hình tốt nhất |
 
-## Việc tiếp theo đề xuất
-- Thêm target A-onset (loại tuần đã đang vượt ngưỡng) và baseline persistence vào `modeling.py`.
-- Chọn ngưỡng báo động theo dữ liệu train thay vì cố định 0.5.
-- Negative binomial GLM (statsmodels) thay Poisson do overdispersion.
+## Việc còn lại
+- Chạy phân tích chính trên dataset MOH 2014–2018 + thời tiết NEA (đề yêu cầu); 2012–2022 làm robustness.
+- Chạy bản cuối với `refit_every: 1` (khoảng 30 phút).
