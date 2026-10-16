@@ -11,5 +11,6 @@ DengueSurgeWarning/
 ```
 
 Quick start: see `pipeline/README.md`.
-Build LaTeX: `cd report && latexmk -pdf main.tex` (same for `proposal/proposal.tex`).
+Build LaTeX: `cd proposal && tectonic proposal.tex` (same for `report/main.tex`; `latexmk -pdf` also works).
+Summary figures: `pipeline/.venv/bin/python visualize/make_visuals.py` -> `visualize/`.
 The report reads figures straight from `pipeline/outputs/figures/`.
