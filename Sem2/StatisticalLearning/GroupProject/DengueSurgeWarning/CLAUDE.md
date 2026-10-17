@@ -43,7 +43,10 @@ Report and proposal in English (LaTeX). User chats in Vietnamese - reply in Viet
    Keep 2012-2022 as the robustness analysis. 2014-2018 needs an earlier first_test_year.
 2. Final run with refit_every = 1 (~30 min).
 3. Rewrite report/sections/*.tex: they are still the old skeleton (two targets, by-year CV, gradient boosting).
-4. Verify the entries in report/references.bib; fill group member names in the proposal.
+4. Verify the entries in report/references.bib.
+- Group: Tran Duy Tai, Do Nhat Thanh, Nguyen Thi Quynh Thu.
+- The proposal (revised 2026-10-17) drops CART / random forest and the cost-ratio alarm threshold;
+  the pipeline and visualize/ still include them.
 
 ## Known caveats
 - Case data on the API ends 2022; 2023+ would need NEA/CDA bulletins or OpenDengue.
