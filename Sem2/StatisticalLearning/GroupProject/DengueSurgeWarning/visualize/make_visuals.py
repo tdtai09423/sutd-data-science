@@ -4,6 +4,7 @@ Run after `python run.py all`:
     pipeline/.venv/bin/python visualize/make_visuals.py
 """
 import shutil
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -26,12 +27,28 @@ H = cfg["targets"]["horizons"]
 K = cfg["targets"]["threshold"]["k"]
 Q = cfg["targets"]["seasonal"]["q"]
 FIRST_TEST = cfg["model"]["first_test_year"]
+HOLD = cfg["model"].get("holdout_from")
+DEV_END = (HOLD - 1) if HOLD else 2022
 COST = cfg["model"]["cost_ratio"]
 
-pooled = pd.read_csv(TAB / "model_cv_pooled.csv")
+pooled_all = pd.read_csv(TAB / "model_cv_pooled.csv")
+if "period" not in pooled_all:
+    pooled_all["period"] = "development"
+pooled = pooled_all[pooled_all.period == "development"].copy()
+holdout = pooled_all[pooled_all.period == "holdout"].copy()
 by_year = pd.read_csv(TAB / "model_cv_by_year.csv")
 imp = pd.read_csv(TAB / "feature_importance.csv")
-cost = pd.read_csv(TAB / "alarm_cost_tradeoff.csv")
+sys.path.insert(0, str(PIPE / "src"))
+from dengue.modeling import metrics  # noqa: E402
+
+# cost trade-off recomputed on the development period only (the holdout is not used for choices)
+oof = pd.read_csv(PIPE / "data/processed/oof_predictions.csv", parse_dates=["week_start"])
+if "period" in oof:
+    oof = oof[oof.period == "development"]
+cost = pd.DataFrame([{"target": t, "model": m, "cost_ratio": r,
+                      **metrics(g.y.values, g.prob.values, 1 / (1 + r))}
+                     for (t, m), g in oof.groupby(["target", "model"])
+                     for r in cfg["model"]["cost_ratio_grid"]])
 mt = pd.read_csv(PIPE / "data/processed/model_table.csv", parse_dates=["week_start"])
 sens_path = TAB / "delay_sensitivity.csv"
 
@@ -75,13 +92,16 @@ for a, kind, title, line in [
     if line:
         a.plot(mt.week_start, mt[line], color="#1f77b4", lw=1, ls="--", label="threshold")
     a.axvline(pd.Timestamp(f"{FIRST_TEST}-01-01"), color="0.5", ls=":")
+    if HOLD:
+        a.axvspan(pd.Timestamp(f"{HOLD}-01-01"), mt.week_start.max(), color="0.9", zorder=0)
     a.set_title(title, loc="left", fontsize=10)
     a.set_ylabel("DF cases / wk")
     a.legend(loc="upper left", fontsize=7, frameon=False, ncol=3)
 ax[3].bar(mt.week_start, mt.dhf, width=6, color="#9467bd")
 ax[3].set_ylabel("DHF / wk")
 ax[3].set_title("Dengue haemorrhagic fever (kept separate, too rare to model)", loc="left", fontsize=10)
-fig.suptitle("Singapore weekly dengue fever cases 2012–2022 and surge labels (test period after dotted line)",
+fig.suptitle("Singapore weekly dengue fever cases 2012–2022 and surge labels "
+             "(rolling-origin test after dotted line; final holdout shaded)",
              x=0.01, ha="left")
 fig.tight_layout()
 fig.savefig(FIG / "01_cases_and_surge_definitions.png")
@@ -106,7 +126,7 @@ for a, kind in zip(axes, BASE):
     a.set_title(tname(t), loc="left", fontsize=10)
     a.set_xlabel("PR-AUC (95% block-bootstrap CI)")
     a.set_xlim(0, 1)
-fig.suptitle(f"Next-week surge (h=1): out-of-sample {FIRST_TEST}–2022   "
+fig.suptitle(f"Next-week surge (h=1): out-of-sample development period {FIRST_TEST}–{DEV_END}   "
              "(dotted = no skill; red dashed = persistence; grey = baselines)", x=0.01, ha="left")
 fig.tight_layout()
 fig.savefig(FIG / "02_pr_auc_ci_h1.png")
@@ -192,6 +212,8 @@ for a, kind in zip(axes, BASE):
     for m in ["persistence[persist]", "seasonal[woy]", "logit[cases]", "lasso_logit[full]", "random_forest[full]"]:
         g = by_year[(by_year.target == t) & (by_year.model == m)]
         a.plot(g.year, g.pr_auc, marker="o", label=NICE[m], ls="--" if m in BASELINES else "-")
+    if HOLD:
+        a.axvspan(HOLD - 0.5, HOLD + 0.5, color="0.9", zorder=0)
     a.set_title(f"{tname(t)}: PR-AUC by test year", loc="left", fontsize=10)
     a.set_xlabel("year")
 axes[0].set_ylabel("PR-AUC")
@@ -235,6 +257,31 @@ if sens_path.exists():
     fig.savefig(FIG / "09_reporting_delay_sensitivity.png")
     plt.close(fig)
 
+# 12. final test (holdout): development vs holdout PR-AUC, h=1 --------------
+if len(holdout):
+    fig, axes = plt.subplots(1, 3, figsize=(14, 4.2), sharey=True)
+    for a, kind in zip(axes, BASE):
+        t = f"surge_{kind}_h1"
+        dv = pooled[pooled.target == t].set_index("model")
+        hv = holdout[holdout.target == t].set_index("model")
+        best = dv[~dv.index.isin(BASELINES)].pr_auc.idxmax()
+        ms = BASELINES + [best]
+        x = np.arange(len(ms))
+        a.bar(x - 0.2, dv.pr_auc.reindex(ms), 0.4, label=f"development {FIRST_TEST}–{DEV_END}", color="#1f77b4")
+        hb = hv.reindex(ms)
+        a.bar(x + 0.2, hb.pr_auc, 0.4, label=f"final period {HOLD} (no CI: 52 weeks = 2 bootstrap blocks)", color="#ff7f0e")
+        a.set_xticks(x, [NICE[m] for m in ms], rotation=20, ha="right", fontsize=8)
+        npos = int(hb.positives.dropna().iloc[0]) if hb.positives.notna().any() else 0
+        a.set_title(f"{tname(t)} ({HOLD} positives: {npos})", loc="left", fontsize=10)
+        a.set_ylim(0, 1)
+    axes[0].set_ylabel("PR-AUC")
+    axes[0].legend(fontsize=8, frameon=False)
+    fig.suptitle(f"Final-period check (target weeks in {HOLD}): baselines and the model chosen on the "
+                 "development period", x=0.01, ha="left")
+    fig.tight_layout()
+    fig.savefig(FIG / "12_final_test_holdout_h1.png")
+    plt.close(fig)
+
 # EDA figures worth keeping -------------------------------------------------
 for src, dst in [("eda_seasonality.png", "10a_eda_seasonality.png"),
                  ("eda_lagged_corr.png", "10b_eda_weather_lag_corr.png"),
@@ -257,6 +304,14 @@ for t in targets:
                  "p_best_beats_persistence": best.p_better_than_persistence,
                  "best_brier": best.brier, "best_recall": best.recall,
                  "best_precision": best.precision, "best_alarms_per_year": best.alarms_per_year})
+    if len(holdout):
+        ho = holdout[holdout.target == t].set_index("model")
+        if best.model in ho.index:
+            rows[-1].update({"holdout_positives": ho.loc[best.model, "positives"],
+                             "holdout_best_pr_auc": ho.loc[best.model, "pr_auc"],
+                             "holdout_persistence_pr_auc": ho.pr_auc.get("persistence[persist]", np.nan),
+                             "holdout_best_recall": ho.loc[best.model, "recall"],
+                             "holdout_best_precision": ho.loc[best.model, "precision"]})
 key = pd.DataFrame(rows).round(3)
 key.to_csv(OUT / "key_results.csv", index=False)
 print(key.to_string(index=False))
