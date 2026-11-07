@@ -1,28 +1,42 @@
 \documentclass[11pt,a4paper]{article}
-\usepackage[margin=2.5cm]{geometry}
+\usepackage[margin=2cm]{geometry}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{enumitem}
 \usepackage{hyperref}
 \usepackage[round]{natbib}
 \usepackage{xcolor}
 
-% Figures produced by the pipeline are read directly from its output folder.
-\graphicspath{{figures/}{../pipeline/outputs/figures/}}
-\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\graphicspath{{figures/}{../visualize/figures/}{../pipeline/outputs/figures/}}
+\setlength{\parskip}{0.25em}
+\setlength{\parindent}{0pt}
+\setlist{nosep,leftmargin=*}
 
 \title{Dengue Surge Warning for Singapore:\\
-Predicting Weekly Case Surges from Surveillance and Weather Data}
-\author{\todo{Author name}}
-\date{\today}
+Can Recent Surveillance and Weather Data Flag Elevated Risk?}
+\author{Tran Duy Tai \and Do Nhat Thanh \and Nguyen Thi Quynh Thu}
+\date{42.510 Statistical Learning}
 
 \begin{document}
 \maketitle
 
 \begin{abstract}
-\todo{Write last. 150--200 words: problem, data, two surge definitions, models compared, main result, implication.}
+Can recent dengue counts and weather identify weeks with a materially elevated risk of a dengue
+surge in Singapore? We forecast 1-, 2- and 4-week-ahead surges in weekly dengue fever (DF)
+notifications from the Ministry of Health bulletin (2012--2022, 574 weeks), with lagged rainfall
+and temperature from NEA/MSS Changi station and reanalysis humidity. Surges are defined in three
+ways (above a rolling 52-week mean + 2 SD, above the same-season 90th percentile, or a rise of at
+least 25\% and 50 cases), plus onset-only versions that exclude weeks already above the threshold.
+Seasonal and persistence baselines are compared with logistic, lasso, CART, random forest, Poisson
+and ridge count models in weekly expanding-window rolling-origin forecasts (target weeks
+2016--2021), with block-bootstrap intervals. 2022 is reported separately as a final-period check.
+For level surges, persistence already reaches PR-AUC 0.93--0.97 and no model beats it reliably.
+Count regression improves growth surges (PR-AUC 0.26 vs 0.17) and seasonal onsets (0.89 vs 0.26,
+but only 5 events). Weather adds no measurable skill beyond recent counts. These are predictive,
+not causal, results; few outbreaks, missing serotype data and prior exposure to 2022 limit them.
 \end{abstract}
 
 \input{sections/01_introduction}
@@ -31,7 +45,9 @@ Predicting Weekly Case Surges from Surveillance and Weather Data}
 \input{sections/04_results}
 \input{sections/05_discussion}
 \input{sections/06_conclusion}
+\input{sections/07_reproducibility}
 
 \bibliographystyle{plainnat}
 \bibliography{references}
+\input{sections/08_appendix}
 \end{document}

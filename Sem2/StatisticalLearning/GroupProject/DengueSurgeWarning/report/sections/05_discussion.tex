@@ -1,4 +1,36 @@
 \section{Discussion}
 \label{sec:discussion}
-\todo{what works, value of weather, limitations (national level only, reporting changes,
-2020 COVID-19 period, data ends 2022), operational use.}
+\textbf{Answer to the question.} Recent case counts can flag weeks that will exceed a level
+threshold next week with high precision and recall. However, most of this skill comes from
+persistence: a simple rule ``we are already above, or close to, the threshold'' is as good as
+any model. This is useful for situational awareness but is not early warning. Where early
+warning is actually needed (growth and onset surges), skill is modest (growth PR-AUC about
+0.26 against a base rate of 0.12) or rests on very few events (S-onset, 5 positives). Weather
+from one station adds no measurable value at 1--4 weeks once recent counts are known, which is
+consistent with weather acting on dengue through longer lags that are already reflected in the
+case trend.
+
+\textbf{Defence points from the brief.}
+\emph{Reporting revisions:} two MOH releases differ by at most 8 cases/week, and a simulated
+one-week delay reduces PR-AUC only moderately; revisions are therefore not the main risk.
+\emph{Immunity and serotypes:} large epidemics such as 2020 and 2022 depend on population
+immunity and circulating serotypes, which are not in the data; a model trained on past
+epidemics can mistake the timing of a peak, as in the July 2022 failure case.
+\emph{Few outbreaks:} onset targets have 5--12 development positives, so their intervals are
+wide and one week can change the ranking; we report them as indicative only.
+\emph{Cost of false alarms:} at the 0.20 threshold (miss cost = 4 false alarms) the level
+targets cost about 10--11 alarms a year and growth about 14; the trade-off for other cost
+ratios is in \texttt{alarm\_cost\_tradeoff.csv}.
+
+\textbf{Limitations.} National counts hide local clusters; notified cases depend on testing
+and health-seeking behaviour (including the COVID-19 period); there is one weather station and
+the humidity series is reanalysis data with only moderate agreement with NEA. The 2022 period
+was seen in exploratory runs and the rolling evaluation trains on earlier 2022 outcomes, so
+it is a final-period check, not an independent test. All statements are predictive, not
+causal.
+
+\textbf{Ethics.} All inputs are aggregated public data, so privacy risk is low. The main risks
+are operational: false alarms divert inspection and communication resources, while misses
+delay response. The 4:1 cost ratio is our assumption, not elicited from decision-makers. The
+scores should support, not replace, human review by public-health staff, and any deployment
+would need prospective validation and monitoring for changes in reporting.

@@ -1,16 +1,17 @@
-\section{Introduction}
+\section{Problem and relevance}
 \label{sec:intro}
-Dengue is endemic in Singapore and shows recurrent epidemic years. Public-health
-action (vector control, communication, hospital capacity) is most effective when it
-starts before cases peak, which motivates an early warning of \emph{surges}.
+Dengue is endemic in Singapore, with substantial year-to-year variation and recurring
+epidemics. An early warning could help public-health teams prioritize vector control,
+risk communication and service readiness. Singapore forecasting studies have used
+climate and surveillance information at longer horizons
+\citep{hii2012forecast,shi2016three}; here we ask a narrower predictive question:
+\emph{for Singapore dengue surveillance teams, can case counts and weather available by
+week $t$ identify a materially elevated DF week at $t+h$?}
 
-\todo{Motivation, previous work in Singapore \citep{hii2012forecast,shi2016three}.}
-
-\paragraph{Research questions.}
-\begin{enumerate}
-  \item How should a ``surge'' be defined, and how much do two definitions
-        (threshold exceedance vs.\ short-term growth) disagree?
-  \item How far ahead (1, 2, 4 weeks) can a surge be predicted from past cases alone?
-  \item Do lagged weather variables add predictive value beyond past cases?
-  \item Do tree-based models outperform (penalised) logistic regression and count regression?
-\end{enumerate}
+We compare three operationally distinct outcomes: crossing a recent-count threshold,
+crossing a historical seasonal threshold, and a relative increase with a minimum count.
+The onset variants ask the more decision-relevant question of whether an elevated period
+can be flagged before the series is already above its threshold. We then assess whether
+weather improves on recent cases and transparent seasonal or persistence baselines.
+The analysis is predictive, not causal: an association between weather and future counts
+does not identify the effect of weather or the impact of an intervention.

@@ -1,0 +1,19 @@
+\section{Reproducibility and contributions}
+\label{sec:reproducibility}
+Code, configuration, processed weekly snapshots, figures and data provenance are provided with
+this report. The main analysis is reproduced with \texttt{cd pipeline \&\& python run.py all}
+(about 9 hours with weekly refits); \texttt{python run.py evaluate} re-scores the saved
+out-of-sample predictions in minutes. The 2014--2018 analysis uses
+\texttt{--config config\_brief.yaml}. Random seeds are fixed. Raw files are downloaded by the
+pipeline rather than redistributed; retrieval dates, hashes and licences are recorded in
+\texttt{pipeline/data/raw/MANIFEST.json}, and the data dictionary is in \texttt{docs/DATA.md}.
+
+\textbf{Contributions.} \textcolor{red}{[To be completed by the group: verified division of work
+for Tran Duy Tai, Do Nhat Thanh and Nguyen Thi Quynh Thu.]}
+
+\textbf{AI-use disclosure.} An AI coding assistant (Copilot SDK agent in VS Code; earlier
+sessions with Claude Code) was used to write and debug pipeline code, convert the course PDFs to
+text, and draft documentation, report text and slides. The group chose the research question,
+surge definitions, models and validation design. All reported numbers are read from pipeline
+output files, and the references were checked against their DOIs. Details, representative
+prompts and the checks performed are in \texttt{AI\_USE.md}.

@@ -1,23 +1,35 @@
-\section{Methods}
+\section{Methods and validation}
 \label{sec:methods}
-\subsection{Surge definitions}
-Let $y_t$ be the cases in week $t$ and $h$ the forecast horizon.
-\begin{itemize}
-  \item \textbf{Threshold (A):} $S^{A}_{t,h} = \mathbb{1}\{y_{t+h} > \mu_t + k\,\sigma_t\}$,
-        where $\mu_t,\sigma_t$ are the mean and standard deviation of the previous $W=52$ weeks.
-  \item \textbf{Growth (B):} $S^{B}_{t,h} = \mathbb{1}\{y_{t+h} \ge (1+p)\,y_t \;\wedge\; y_{t+h}\ge m\}$.
-\end{itemize}
+Let $y_t$ denote weekly DF cases and $h\in\{1,2,4\}$ the forecast horizon. We label a
+surge if (A) $y_{t+h}>\mu_t+2\sigma_t$, where $\mu_t,\sigma_t$ use the previous 52
+weeks; (S) $y_{t+h}$ exceeds the 90th percentile for dates within $\pm17$ days of the
+same season in earlier years, excluding observations from the previous 26 weeks; or
+(G) $y_{t+h}\ge(1+p_h)y_t$ and $y_{t+h}\ge50$, with $p_h=0.25,0.30,0.45$. A-onset and
+S-onset are defined only when $y_t$ is not already above the corresponding threshold.
+Thresholds use information available at $t$.
 
-\subsection{Predictors}
-All predictors are known at week $t$: lagged log cases, rolling means, recent growth,
-seasonal terms $\sin/\cos$ of week-of-year, and weather lagged 0--12 weeks.
+Predictors include log-transformed current and lagged counts, recent growth and rolling
+means, seasonal terms, and rainfall, rain days, temperature and humidity lagged by
+0--12 weeks. We compare prior, seasonal-rate and persistence baselines with logistic
+regression on cases, weather or both; L1-regularised logistic regression with forward
+time-series tuning; a depth-3 CART; random forest; Poisson regression; and ridge
+regression on log counts. Count forecasts are converted to probabilities of exceeding
+the target using a log-normal predictive distribution based on training residuals.
+Model comparisons use PR-AUC and Brier score; alarms at probability $0.20$ illustrate
+a missed-surge:false-alarm cost ratio of 4:1, not a clinically validated threshold.
 
-\subsection{Models}
-Logistic regression (unpenalised and $\ell_1$), a depth-3 classification tree,
-random forest, gradient boosting, and Poisson count regressions whose forecasts are
-converted to alarms with the same rule that defines the target.
+We use expanding-window rolling-origin forecasts by week from 2016, refitting every
+week and purging training rows whose complete label horizon would not yet be observed.
+The development period is defined by target weeks before 2022; target weeks in 2022
+form the final-period evaluation, including forecasts issued in late 2021 for 2022.
+During this rolling evaluation, earlier 2022 labels can enter training for later
+forecasts only after they would have become observable.
+We report PR-AUC, precision, recall, alarms per year and Brier score/calibration;
+count-model errors are also reported as MAE/RMSE in cases per week. Uncertainty uses
+500 moving-block bootstrap draws with 26-week blocks. A one-week reporting-delay
+sensitivity re-runs the primary one-week targets with counts from week $t$ unavailable.
 
-\subsection{Validation and model selection}
-Rolling-origin evaluation: each year from 2017 is a test fold, trained on all earlier
-weeks, with the last $h$ weeks purged to avoid target leakage. Metrics: ROC-AUC,
-PR-AUC (preferred under class imbalance), Brier score, precision, recall and false alarm rate.
+\textbf{Holdout qualification.} Earlier exploratory runs pooled forecasts through 2022
+before the final split was selected. In addition, the rolling evaluation updates using
+earlier observed outcomes within 2022. Thus this is a final-period prequential check,
+not a strictly untouched static test set or independent external validation.
