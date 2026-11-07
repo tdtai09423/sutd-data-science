@@ -2,7 +2,14 @@ pipeline/.venv/
 pipeline/data/raw/*
 pipeline/data/interim/*
 pipeline/data/processed/*
+pipeline/data/processed_brief/*
 !pipeline/data/**/.gitkeep
+# provenance record + analysis-ready snapshot (public data, redistribution allowed)
+!pipeline/data/raw/MANIFEST.json
+!pipeline/data/processed*/weekly.csv
+!pipeline/data/processed*/weather_weekly.csv
+# course documents (instructor's PDFs) and their converted Markdown stay local
+Requirement/
 __pycache__/
 *.aux
 *.log

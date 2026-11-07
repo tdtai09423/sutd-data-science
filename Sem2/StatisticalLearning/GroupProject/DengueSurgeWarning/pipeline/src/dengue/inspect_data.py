@@ -13,7 +13,14 @@ def _csv_block(df, n=5):
 def run(cfg):
     raw = cfg["paths"]["raw"]
     lines = ["# Inspect summary", ""]
-    files = sorted(p for p in raw.rglob("*") if p.is_file() and p.name != ".gitkeep")
+    files = sorted(p for p in raw.rglob("*") if p.is_file() and p.name != ".gitkeep"
+                   and "mss" not in p.relative_to(raw).parts)
+    for st in sorted((raw / "mss").glob("*")) if (raw / "mss").exists() else []:
+        months = sorted(st.glob("*.csv"))
+        lines += [f"## mss/{st.name}", "", f"{len(months)} monthly daily-record files "
+                  f"({months[0].stem} -> {months[-1].stem})" if months else "no files", "",
+                  "head of first file:", "```",
+                  pd.read_csv(months[0], encoding="latin1").head(3).to_string() if months else "", "```", ""]
     if not files:
         lines.append("No raw files. Run `python run.py fetch` first.")
     for p in files:

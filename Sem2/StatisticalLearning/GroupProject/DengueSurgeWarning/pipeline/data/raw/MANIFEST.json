@@ -1,0 +1,107 @@
+{
+  "mss": {
+    "source": "Meteorological Service Singapore (NEA), historical daily records",
+    "url": "http://www.weather.gov.sg/climate-historical-daily/",
+    "query": "https://www.weather.gov.sg/files/dailydata/DAILYDATA_{station}_{ym}.csv",
+    "station": "S24",
+    "months": "2011-06 -> 2022-12",
+    "n_files": 139,
+    "sha256_of_file_hashes": "ee4a21c221d8c74bb18ec423a0cf9b9aa1f546fb38c183bdae3b666354b4c8a4",
+    "retrieved_at": "2026-11-06T22:47:04+08:00",
+    "licence": "NEA/MSS terms of use: free use with attribution (raw files not redistributed; recreate with `run.py fetch`)"
+  },
+  "moh_weekly_bulletin": {
+    "file": "moh_weekly_bulletin.csv",
+    "bytes": 534409,
+    "sha256": "b782b6570e3e3ba4377b487b0c1c40905d0d7dd40db0e716c8a659bb53310a54",
+    "retrieved_at": "2026-11-06T22:46:11+08:00",
+    "source": "data.gov.sg",
+    "dataset_id": "d_ca168b2cb763640d72c4600a68f9909e",
+    "url": "https://data.gov.sg/datasets/d_ca168b2cb763640d72c4600a68f9909e/view",
+    "query": "https://api-open.data.gov.sg/v1/public/api/datasets/d_ca168b2cb763640d72c4600a68f9909e/poll-download",
+    "licence": "Singapore Open Data Licence v1.0",
+    "metadata": {
+      "name": "Weekly Infectious Disease Bulletin Cases",
+      "managedBy": "Ministry of Health",
+      "lastUpdatedAt": "2024-06-06T14:59:56+08:00",
+      "coverageStart": "2012-01-01T08:00:00+08:00",
+      "coverageEnd": "2022-12-31T08:00:00+08:00"
+    }
+  },
+  "moh_dengue_dhf_2014_2018": {
+    "file": "moh_dengue_dhf_2014_2018.csv",
+    "bytes": 8572,
+    "sha256": "722f3fbf5237280dbf9e1d503f527b707ce3e9cdb30a102944af48b757f149d2",
+    "retrieved_at": "2026-11-06T22:46:13+08:00",
+    "source": "data.gov.sg",
+    "dataset_id": "d_ac1eecf0886ff0bceefbc51556247015",
+    "url": "https://data.gov.sg/datasets/d_ac1eecf0886ff0bceefbc51556247015/view",
+    "query": "https://api-open.data.gov.sg/v1/public/api/datasets/d_ac1eecf0886ff0bceefbc51556247015/poll-download",
+    "licence": "Singapore Open Data Licence v1.0",
+    "metadata": {
+      "name": "Weekly Number of Dengue and Dengue Haemorrhagic Fever Cases",
+      "managedBy": "Ministry of Health",
+      "lastUpdatedAt": "2024-06-06T14:53:44+08:00",
+      "coverageStart": "2014-01-01T08:00:00+08:00",
+      "coverageEnd": "2018-12-31T08:00:00+08:00"
+    }
+  },
+  "nea_rh_monthly": {
+    "file": "nea_rh_monthly.csv",
+    "bytes": 6895,
+    "sha256": "47449b875513742352f6b859ad4495ba5cb43feb8ed4b7bafdd49331c8f66a26",
+    "retrieved_at": "2026-11-06T22:46:23+08:00",
+    "source": "data.gov.sg",
+    "dataset_id": "d_e3b1111a26b2aefef4f386c068d4ca5d",
+    "url": "https://data.gov.sg/datasets/d_e3b1111a26b2aefef4f386c068d4ca5d/view",
+    "query": "https://api-open.data.gov.sg/v1/public/api/datasets/d_e3b1111a26b2aefef4f386c068d4ca5d/poll-download",
+    "licence": "Singapore Open Data Licence v1.0",
+    "metadata": {
+      "name": "Relative Humidity - Monthly Mean",
+      "managedBy": "National Environment Agency",
+      "lastUpdatedAt": "2026-10-08T09:39:56+08:00",
+      "coverageStart": "1982-01-01T08:00:00+08:00",
+      "coverageEnd": "2026-09-01T08:00:00+08:00"
+    }
+  },
+  "nea_dengue_clusters": {
+    "file": "nea_dengue_clusters/20261107.geojson",
+    "bytes": 17587,
+    "sha256": "96efef00530362d60ad2ea083658b648af9178a57b9dac12eae6f41ea12517ec",
+    "retrieved_at": "2026-11-07T00:00:34+08:00",
+    "source": "data.gov.sg",
+    "dataset_id": "d_dbfabf16158d1b0e1c420627c0819168",
+    "url": "https://data.gov.sg/datasets/d_dbfabf16158d1b0e1c420627c0819168/view",
+    "query": "https://api-open.data.gov.sg/v1/public/api/datasets/d_dbfabf16158d1b0e1c420627c0819168/poll-download",
+    "licence": "Singapore Open Data Licence v1.0",
+    "metadata": {
+      "name": "Dengue Clusters (GEOJSON)",
+      "managedBy": "National Environment Agency",
+      "lastUpdatedAt": "2026-11-06T10:06:44+08:00",
+      "coverageStart": "2025-11-07T00:00:00+08:00",
+      "coverageEnd": null
+    }
+  },
+  "weather_open_meteo": {
+    "file": "weather_open_meteo_daily.csv",
+    "bytes": 140988,
+    "sha256": "771e51565a9d7391cc8b9d8a2d84c01ca42aa11c9bf9510f036645cbc29bf0d9",
+    "retrieved_at": "2026-11-06T22:46:27+08:00",
+    "source": "Open-Meteo historical weather API (ERA5 reanalysis)",
+    "url": "https://archive-api.open-meteo.com/v1/archive",
+    "params": {
+      "latitude": 1.3521,
+      "longitude": 103.8198,
+      "start_date": "2011-06-01",
+      "end_date": "2022-12-31",
+      "daily": [
+        "precipitation_sum",
+        "temperature_2m_mean",
+        "temperature_2m_max",
+        "temperature_2m_min",
+        "relative_humidity_2m_mean"
+      ]
+    },
+    "licence": "CC BY 4.0 (open-meteo.com)"
+  }
+}

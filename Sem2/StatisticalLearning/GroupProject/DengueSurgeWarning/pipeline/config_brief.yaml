@@ -1,0 +1,89 @@
+# Dengue surge warning - SECONDARY analysis on the brief's source: MOH weekly DF + DHF 2014-2018
+# + NEA/MSS Changi weather. Run with: python run.py all --config config_brief.yaml
+# Only 2017-2018 can be test years (thresholds need 1-2 years of history) and both were
+# low-transmission years, so few surges are available: read results as a feasibility check.
+# Edit values here between iterations instead of touching code.
+
+paths:
+  raw: data/raw
+  interim: data/interim
+  processed: data/processed_brief
+  outputs: outputs_brief
+
+datagov:
+  # Optional: put an API key in this env variable for higher rate limits.
+  api_key_env: DATAGOV_API_KEY
+  datasets:
+    moh_weekly_bulletin:          # MAIN case source, 2012-2022
+      id: d_ca168b2cb763640d72c4600a68f9909e
+      format: csv
+    moh_dengue_dhf_2014_2018:     # brief's source, 2014-2018: cross-check + config_brief.yaml
+      id: d_ac1eecf0886ff0bceefbc51556247015
+      format: csv
+    nea_rh_monthly:               # Changi monthly mean relative humidity
+      id: d_e3b1111a26b2aefef4f386c068d4ca5d
+      format: csv
+    nea_dengue_clusters:          # current snapshot only, saved with a date stamp
+      id: d_dbfabf16158d1b0e1c420627c0819168
+      format: geojson
+      snapshot: true
+
+weather:
+  source: mss                # mss = NEA/MSS station records (rain, temperature); open_meteo = reanalysis
+  humidity_source: open_meteo  # MSS daily files have no humidity; Open-Meteo RH is checked vs NEA monthly RH
+  mss:                       # http://www.weather.gov.sg/climate-historical-daily/
+    station: S24             # Changi
+    start: "2011-06"         # shared by both analyses (lags need data before the first case week)
+    end: "2022-12"
+  provider: open_meteo
+  latitude: 1.3521
+  longitude: 103.8198
+  start_date: "2011-06-01"   # earlier than case data so long weather lags exist
+  end_date: "2022-12-31"
+  daily:
+    - precipitation_sum
+    - temperature_2m_mean
+    - temperature_2m_max
+    - temperature_2m_min
+    - relative_humidity_2m_mean
+
+build:
+  case_source: moh_dengue_dhf_2014_2018   # brief's file, DF + DHF 2014-2018
+  crosscheck_source: moh_weekly_bulletin  # compared on overlapping weeks (revisions)
+  dengue_regex: "dengue"     # bulletin only: diseases matching this are summed into `cases`
+  target_series: dengue_fever  # series used for targets/predictors (DHF kept separate)
+
+features:
+  case_lags: [1, 2, 3, 4, 6, 8]      # lag 0 (current week) is always included
+  rolling_windows: [4, 8]
+  weather_vars: [rain_sum, rain_days, temp_mean, temp_max, temp_min, rh_mean]
+  weather_lags: [0, 2, 4, 6, 8, 10, 12]
+  report_delay: 0                    # 1 = week t's counts treated as not yet available
+
+targets:
+  horizons: [1, 2, 4]          # weeks ahead
+  threshold:                   # target A: y[t+h] > mean + k*sd of the past `window` weeks
+    window: 52
+    k: 2.0                     # 1.5 gave ~23% prevalence on real data; 2.0 gives ~19%
+  seasonal:                    # target seas: y[t+h] > q-quantile of the same season in earlier years
+    q: 0.90
+    halfwidth_days: 17         # +-2.5 weeks around the same day of year
+    exclude_recent_days: 182   # only weeks > 26 weeks before t+h (so known at t)
+    min_years: 2
+  onset: [thr, seas]           # also build "<kind>onset" targets (y[t] not yet above threshold)
+  growth:                      # target B: y[t+h] >= (1+pct[h])*y[t] and y[t+h] >= min_cases
+    pct: {1: 0.25, 2: 0.30, 4: 0.45}   # per horizon (fixed 0.25 gave 12/20/28%)
+    min_cases: 50
+
+model:
+  first_test_year: 2017        # rolling-origin by week: forecasts are evaluated from this year on
+  holdout_from: null           # too few weeks for a separate final test period
+  refit_every: 1               # weeks between refits; forecasts are still made every week (1 = refit weekly, ~30 min)
+  cost_ratio: 4                # cost(missed surge) / cost(false alarm) -> alarm if P >= 1/(1+ratio)
+  cost_ratio_grid: [1, 2, 4, 9]
+  bootstrap: 500               # moving-block bootstrap draws for CIs
+  delay_sensitivity: false
+  delay_sensitivity_targets: [surge_thr_h1, surge_seas_h1, surge_grow_h1]
+  targets: null                # null = all; or a list to restrict
+  models: null                 # null = all; baselines are always kept
+  random_state: 42
