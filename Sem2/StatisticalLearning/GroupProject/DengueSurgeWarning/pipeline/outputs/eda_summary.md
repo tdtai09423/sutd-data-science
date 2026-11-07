@@ -19,11 +19,11 @@ week_start
 
 strongest lag per weather var (by |corr|):
 ```
-rain_sum   level: lag 19 r=-0.12 | growth4: lag 11 r=-0.21
-rain_days  level: lag 19 r=-0.23 | growth4: lag 11 r=-0.25
-temp_mean  level: lag  9 r=+0.15 | growth4: lag 19 r=-0.21
-temp_max   level: lag 15 r=+0.22 | growth4: lag  7 r=+0.25
-temp_min   level: lag  2 r=+0.19 | growth4: lag 12 r=-0.25
+rain_sum   level: lag 18 r=-0.09 | growth4: lag  1 r=+0.13
+rain_days  level: lag 19 r=-0.18 | growth4: lag 11 r=-0.19
+temp_mean  level: lag  2 r=+0.23 | growth4: lag 19 r=-0.19
+temp_max   level: lag 14 r=+0.26 | growth4: lag 19 r=-0.21
+temp_min   level: lag  2 r=+0.19 | growth4: lag 19 r=-0.11
 rh_mean    level: lag 19 r=-0.20 | growth4: lag 10 r=-0.25
 ```
 NOTE: raw correlations are confounded by seasonality; treat as a guide only.

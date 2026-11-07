@@ -1,7 +1,7 @@
 target,model,mae,rmse
-surge_thr_h1,poisson_glm[full],44.1,94.0
-surge_thr_h1,ridge_logcount[full],41.9,83.8
-surge_thr_h2,poisson_glm[full],63.3,124.6
-surge_thr_h2,ridge_logcount[full],56.4,104.5
-surge_thr_h4,poisson_glm[full],108.5,200.7
-surge_thr_h4,ridge_logcount[full],87.2,151.8
+surge_thr_h1,poisson_glm[full],36.9,67.4
+surge_thr_h1,ridge_logcount[full],33.0,59.6
+surge_thr_h2,poisson_glm[full],51.3,87.9
+surge_thr_h2,ridge_logcount[full],45.1,81.3
+surge_thr_h4,poisson_glm[full],80.4,138.7
+surge_thr_h4,ridge_logcount[full],66.2,125.1

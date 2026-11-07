@@ -1,0 +1,3 @@
+series,overlap_weeks,identical_weeks,max_abs_diff,total_main,total_other
+dengue_fever,261,209,8.0,48656.0,48768
+dhf,261,259,1.0,99.0,101

@@ -1,0 +1,6 @@
+check,n,corr,mean_diff
+weekly rain_sum: MSS vs Open-Meteo,603,0.482,17.627
+weekly temp_mean: MSS vs Open-Meteo,603,0.908,-1.334
+weekly temp_max: MSS vs Open-Meteo,603,0.751,-2.508
+weekly temp_min: MSS vs Open-Meteo,603,0.673,-0.709
+monthly RH: Open-Meteo vs NEA Changi,139,0.562,5.825

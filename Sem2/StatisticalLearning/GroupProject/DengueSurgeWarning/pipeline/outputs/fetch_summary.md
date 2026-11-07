@@ -1,8 +1,10 @@
 # Fetch summary
-run at 2026-10-15 16:11
+run at 2026-11-07 00:00
 
-- moh_weekly_bulletin: OK (521.9 KB) -> data/raw/moh_weekly_bulletin.csv
-- moh_dengue_dhf_2014_2018: OK (8.4 KB) -> data/raw/moh_dengue_dhf_2014_2018.csv
-- nea_rh_monthly: OK (6.7 KB) -> data/raw/nea_rh_monthly.csv
-- nea_dengue_clusters: OK (15.4 KB) -> data/raw/nea_dengue_clusters/20261015.geojson
-- weather_open_meteo: OK (5615 days, 2011-06-01 -> 2026-10-14)
+- moh_weekly_bulletin: SKIPPED (exists: moh_weekly_bulletin.csv)
+- moh_dengue_dhf_2014_2018: SKIPPED (exists: moh_dengue_dhf_2014_2018.csv)
+- nea_rh_monthly: SKIPPED (exists: nea_rh_monthly.csv)
+- nea_dengue_clusters: OK (17.2 KB) -> data/raw/nea_dengue_clusters/20261107.geojson
+- weather_open_meteo: SKIPPED (exists)
+- mss_S24 daily (2011-06 -> 2022-12): 0 months downloaded, 139 skipped, failed: none
+provenance: data/raw/MANIFEST.json

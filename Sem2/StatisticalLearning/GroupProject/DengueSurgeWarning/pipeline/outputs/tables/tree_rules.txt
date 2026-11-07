@@ -1,164 +1,152 @@
 ===== surge_thr_h1 =====
 |--- marg_thr <= 0.06
 |   |--- marg_thr <= -0.24
-|   |   |--- rain_sum_lag8 <= 120.85
+|   |   |--- rh_mean_lag8 <= 89.36
 |   |   |   |--- class: 0
-|   |   |--- rain_sum_lag8 >  120.85
+|   |   |--- rh_mean_lag8 >  89.36
 |   |   |   |--- class: 0
 |   |--- marg_thr >  -0.24
-|   |   |--- rain_sum_lag6 <= 46.90
-|   |   |   |--- class: 0
-|   |   |--- rain_sum_lag6 >  46.90
-|   |   |   |--- class: 0
+|   |   |--- class: 0
 |--- marg_thr >  0.06
-|   |--- marg_thr <= 0.22
+|   |--- marg_thr <= 0.23
 |   |   |--- class: 1
-|   |--- marg_thr >  0.22
+|   |--- marg_thr >  0.23
 |   |   |--- class: 1
 
 
 ===== surge_seas_h1 =====
-|--- marg_seas <= -0.05
+|--- marg_seas <= 0.08
 |   |--- marg_seas <= -0.19
 |   |   |--- class: 0
 |   |--- marg_seas >  -0.19
 |   |   |--- class: 0
-|--- marg_seas >  -0.05
-|   |--- logy <= 6.16
+|--- marg_seas >  0.08
+|   |--- rh_mean_lag0 <= 85.36
 |   |   |--- class: 1
-|   |--- logy >  6.16
-|   |   |--- temp_max_lag8 <= 30.15
-|   |   |   |--- class: 1
-|   |   |--- temp_max_lag8 >  30.15
-|   |   |   |--- class: 1
+|   |--- rh_mean_lag0 >  85.36
+|   |   |--- class: 1
 
 
 ===== surge_grow_h1 =====
 |--- logy <= 3.98
-|   |--- temp_max_lag2 <= 29.42
+|   |--- temp_mean_lag10 <= 27.91
 |   |   |--- class: 0
-|   |--- temp_max_lag2 >  29.42
-|   |   |--- class: 0
+|   |--- temp_mean_lag10 >  27.91
+|   |   |--- class: 1
 |--- logy >  3.98
-|   |--- rain_sum_lag12 <= 12.30
-|   |   |--- rh_mean_lag12 <= 79.86
+|   |--- rain_sum_lag12 <= 0.10
+|   |   |--- class: 0
+|   |--- rain_sum_lag12 >  0.10
+|   |   |--- logy_lag3 <= 4.01
 |   |   |   |--- class: 0
-|   |   |--- rh_mean_lag12 >  79.86
-|   |   |   |--- class: 0
-|   |--- rain_sum_lag12 >  12.30
-|   |   |--- logy_lag8 <= 4.69
-|   |   |   |--- class: 0
-|   |   |--- logy_lag8 >  4.69
+|   |   |--- logy_lag3 >  4.01
 |   |   |   |--- class: 0
 
 
 ===== surge_thr_h2 =====
-|--- marg_thr <= -0.03
+|--- marg_thr <= -0.02
 |   |--- marg_thr <= -0.24
-|   |   |--- growth_4 <= 0.43
+|   |   |--- growth_4 <= 0.42
 |   |   |   |--- class: 0
-|   |   |--- growth_4 >  0.43
+|   |   |--- growth_4 >  0.42
 |   |   |   |--- class: 0
 |   |--- marg_thr >  -0.24
-|   |   |--- rain_sum_lag2 <= 61.00
-|   |   |   |--- class: 0
-|   |   |--- rain_sum_lag2 >  61.00
-|   |   |   |--- class: 0
-|--- marg_thr >  -0.03
-|   |--- marg_thr <= 0.22
+|   |   |--- class: 0
+|--- marg_thr >  -0.02
+|   |--- rh_mean_lag2 <= 86.79
 |   |   |--- class: 1
-|   |--- marg_thr >  0.22
-|   |   |--- logy_lag2 <= 6.14
-|   |   |   |--- class: 1
-|   |   |--- logy_lag2 >  6.14
-|   |   |   |--- class: 1
+|   |--- rh_mean_lag2 >  86.79
+|   |   |--- class: 1
 
 
 ===== surge_seas_h2 =====
 |--- logy <= 6.17
-|   |--- marg_seas <= -0.02
-|   |   |--- marg_seas <= -0.24
-|   |   |   |--- class: 0
-|   |   |--- marg_seas >  -0.24
-|   |   |   |--- class: 0
-|   |--- marg_seas >  -0.02
+|   |--- marg_seas <= -0.24
 |   |   |--- class: 0
+|   |--- marg_seas >  -0.24
+|   |   |--- rh_mean_lag4 <= 86.21
+|   |   |   |--- class: 0
+|   |   |--- rh_mean_lag4 >  86.21
+|   |   |   |--- class: 0
 |--- logy >  6.17
-|   |--- marg_seas <= 0.24
+|   |--- woy_cos <= -0.89
 |   |   |--- class: 1
-|   |--- marg_seas >  0.24
+|   |--- woy_cos >  -0.89
 |   |   |--- class: 1
 
 
 ===== surge_grow_h2 =====
-|--- logy_lag8 <= 5.94
-|   |--- woy_cos <= 0.98
-|   |   |--- temp_max_lag10 <= 30.76
+|--- growth_1 <= -0.27
+|   |--- class: 0
+|--- growth_1 >  -0.27
+|   |--- rh_mean_lag12 <= 84.93
+|   |   |--- marg_thr <= -0.15
 |   |   |   |--- class: 0
-|   |   |--- temp_max_lag10 >  30.76
-|   |   |   |--- class: 1
-|   |--- woy_cos >  0.98
-|   |   |--- class: 1
-|--- logy_lag8 >  5.94
-|   |--- temp_mean_lag12 <= 27.45
-|   |   |--- class: 0
-|   |--- temp_mean_lag12 >  27.45
-|   |   |--- class: 0
+|   |   |--- marg_thr >  -0.15
+|   |   |   |--- class: 0
+|   |--- rh_mean_lag12 >  84.93
+|   |   |--- logy_lag2 <= 4.06
+|   |   |   |--- class: 0
+|   |   |--- logy_lag2 >  4.06
+|   |   |   |--- class: 0
 
 
 ===== surge_thr_h4 =====
-|--- marg_thr <= -0.12
-|   |--- temp_max_lag8 <= 30.56
-|   |   |--- marg_thr <= -0.25
-|   |   |   |--- class: 0
-|   |   |--- marg_thr >  -0.25
-|   |   |   |--- class: 0
-|   |--- temp_max_lag8 >  30.56
+|--- marg_thr <= -0.21
+|   |--- marg_thr <= -0.49
 |   |   |--- class: 0
-|--- marg_thr >  -0.12
+|   |--- marg_thr >  -0.49
+|   |   |--- temp_mean_lag4 <= 28.45
+|   |   |   |--- class: 0
+|   |   |--- temp_mean_lag4 >  28.45
+|   |   |   |--- class: 0
+|--- marg_thr >  -0.21
 |   |--- growth_4 <= 0.21
 |   |   |--- class: 0
 |   |--- growth_4 >  0.21
-|   |   |--- rain_days_lag10 <= 6.50
-|   |   |   |--- class: 1
-|   |   |--- rain_days_lag10 >  6.50
+|   |   |--- temp_max_lag8 <= 31.91
+|   |   |   |--- class: 0
+|   |   |--- temp_max_lag8 >  31.91
 |   |   |   |--- class: 1
 
 
 ===== surge_seas_h4 =====
 |--- logy <= 6.19
-|   |--- logy <= 5.87
-|   |   |--- marg_thr <= -0.02
+|   |--- logy <= 5.81
+|   |   |--- temp_min_lag6 <= 26.87
 |   |   |   |--- class: 0
-|   |   |--- marg_thr >  -0.02
+|   |   |--- temp_min_lag6 >  26.87
 |   |   |   |--- class: 0
-|   |--- logy >  5.87
+|   |--- logy >  5.81
 |   |   |--- logy_lag3 <= 5.89
-|   |   |   |--- class: 1
+|   |   |   |--- class: 0
 |   |   |--- logy_lag3 >  5.89
 |   |   |   |--- class: 0
 |--- logy >  6.19
-|   |--- logy <= 6.38
+|   |--- logy_lag1 <= 6.40
 |   |   |--- class: 1
-|   |--- logy >  6.38
-|   |   |--- logy_lag2 <= 7.05
-|   |   |   |--- class: 1
-|   |   |--- logy_lag2 >  7.05
-|   |   |   |--- class: 1
+|   |--- logy_lag1 >  6.40
+|   |   |--- class: 1
 
 
 ===== surge_grow_h4 =====
-|--- temp_max_lag6 <= 30.50
-|   |--- logy_lag8 <= 5.52
-|   |   |--- marg_thr <= 0.07
+|--- temp_max_lag6 <= 32.14
+|   |--- logy <= 3.94
+|   |   |--- class: 0
+|   |--- logy >  3.94
+|   |   |--- rh_mean_lag2 <= 88.64
 |   |   |   |--- class: 0
-|   |   |--- marg_thr >  0.07
+|   |   |--- rh_mean_lag2 >  88.64
+|   |   |   |--- class: 0
+|--- temp_max_lag6 >  32.14
+|   |--- woy_sin <= 0.36
+|   |   |--- temp_mean_lag2 <= 27.88
+|   |   |   |--- class: 0
+|   |   |--- temp_mean_lag2 >  27.88
+|   |   |   |--- class: 0
+|   |--- woy_sin >  0.36
+|   |   |--- logy_lag1 <= 5.52
+|   |   |   |--- class: 0
+|   |   |--- logy_lag1 >  5.52
 |   |   |   |--- class: 1
-|   |--- logy_lag8 >  5.52
-|   |   |--- rain_sum_lag12 <= 19.45
-|   |   |   |--- class: 0
-|   |   |--- rain_sum_lag12 >  19.45
-|   |   |   |--- class: 0
-|--- temp_max_lag6 >  30.50
-|   |--- class: 1
 
