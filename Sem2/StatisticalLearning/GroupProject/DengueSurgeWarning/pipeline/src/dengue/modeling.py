@@ -239,7 +239,14 @@ def pooled_table(oof, c):
     return pd.DataFrame(rows).sort_values(["target", "pr_auc"], ascending=[True, False])
 
 
-def run(cfg):
+def _target_week(oof):
+    horizons = oof.target.str.extract(r"_h(\d+)$")[0].astype(int)
+    return oof.week_start + pd.to_timedelta(horizons, unit="W")
+
+
+def run(cfg, reuse_oof=False):
+    """reuse_oof=True (stage `evaluate`): skip the slow rolling-origin refits and recompute every
+    table, figure and summary from the saved data/processed/oof_predictions.csv."""
     proc, out = cfg["paths"]["processed"], cfg["paths"]["outputs"]
     tab, fig = out / "tables", out / "figures"
     mc = cfg["model"]
@@ -251,51 +258,83 @@ def run(cfg):
                if not mc.get("targets") or t in mc["targets"]]
     c = 1 / (1 + mc["cost_ratio"])
 
-    oof = rolling_origin(cfg, d_all, targets, specs)
+    if reuse_oof:
+        oof = pd.read_csv(proc / "oof_predictions.csv", parse_dates=["week_start"])
+        oof = oof.drop(columns=[k for k in ["period", "target_week"] if k in oof])
+    else:
+        oof = rolling_origin(cfg, d_all, targets, specs)
+    hold = mc.get("holdout_from")
+    oof["target_week"] = _target_week(oof)
+    oof["period"] = np.where(oof.target_week.dt.year >= hold, "holdout", "development") if hold \
+        else "development"
     oof.to_csv(proc / "oof_predictions.csv", index=False)
-    pooled = pooled_table(oof, c)
-    boot = block_bootstrap(oof, B=mc["bootstrap"])
-    pooled = pooled.merge(boot, on=["target", "model"], how="left")
-    pooled.round(3).to_csv(tab / "model_cv_pooled.csv", index=False)
+    parts = []
+    for per in ["development", "holdout", "all"] if hold else ["development"]:
+        g = oof if per == "all" else oof[oof.period == per]
+        if g.empty:
+            continue
+        parts.append(pooled_table(g, c).merge(block_bootstrap(g, B=mc["bootstrap"]),
+                                              on=["target", "model"], how="left").assign(period=per))
+    pooled_all = pd.concat(parts, ignore_index=True)
+    pooled_all.round(3).to_csv(tab / "model_cv_pooled.csv", index=False)
+    pooled = pooled_all[pooled_all.period == "development"].drop(columns="period")
 
+    development = oof[oof.period == "development"] if hold else oof
     by_year = []
-    for (t, m, y), g in oof.groupby(["target", "model", oof.week_start.dt.year]):
+    for (t, m, y), g in oof.groupby(["target", "model", oof.target_week.dt.year]):
         by_year.append({"target": t, "model": m, "year": y, **metrics(g.y.values, g.prob.values, c)})
     pd.DataFrame(by_year).round(3).to_csv(tab / "model_cv_by_year.csv", index=False)
 
     cost_rows = []
-    for (t, m), g in oof.groupby(["target", "model"]):
+    for (t, m), g in development.groupby(["target", "model"]):
         for r in mc["cost_ratio_grid"]:
-            cost_rows.append({"target": t, "model": m, "cost_ratio": r, "threshold": 1 / (1 + r),
+            cost_rows.append({"period": "development", "target": t, "model": m,
+                              "cost_ratio": r, "threshold": 1 / (1 + r),
                               **{k: v for k, v in metrics(g.y.values, g.prob.values, 1 / (1 + r)).items()
                                  if k in ["precision", "recall", "false_alarm_rate", "alarms_per_year"]}})
     pd.DataFrame(cost_rows).round(3).to_csv(tab / "alarm_cost_tradeoff.csv", index=False)
 
-    reg = oof[oof.pred_count.notna()]
+    reg = development[development.pred_count.notna()]
     reg_err = (reg.assign(ae=(reg.pred_count - reg.y_count).abs(),
                           se=(reg.pred_count - reg.y_count) ** 2)
-               .groupby(["target", "model"]).agg(mae=("ae", "mean"), rmse=("se", lambda s: np.sqrt(s.mean()))))
-    reg_err = reg_err[reg_err.index.get_level_values(0).str.contains("_thr_")]  # same counts for all kinds
-    reg_err.round(1).to_csv(tab / "regression_errors.csv")
+               .groupby(["target", "model"]).agg(mae=("ae", "mean"),
+                                                  rmse=("se", lambda s: np.sqrt(s.mean())))
+               .reset_index())
+    reg_err = reg_err[reg_err.target.str.contains("_thr_")]  # same counts for all kinds
+    reg_err.round(1).to_csv(tab / "regression_errors.csv", index=False)
 
     sens = _delay_sensitivity(cfg, specs, c) if mc.get("delay_sensitivity") else None
     if sens is not None:
         sens.round(3).to_csv(tab / "delay_sensitivity.csv")
     _interpret(cfg, d_all, tab)
-    _plot_calibration(oof, pooled, fig, cfg)
+    _plot_calibration(development, pooled, fig, cfg)
     _plot_best(pooled, oof, d_all, fig)
 
     lines = ["# Model summary", "",
              f"Rolling-origin by week: expanding window from {mc['first_test_year']}, refit every "
              f"{mc['refit_every']} week(s), training rows purged so every label is known at the origin.",
+             f"Development period: {mc['first_test_year']}-{(hold - 1) if hold else 'end'} (model comparison)"
+             + (f"; target weeks in {hold} are reported separately below and do not guide model selection."
+                if hold else "."),
              f"Alarm if P(surge) >= {c:.2f} (cost of a missed surge = {mc['cost_ratio']} x a false alarm).",
              "CI: 95% moving-block bootstrap (26-week blocks). p_better = share of bootstrap draws where "
-             "the model beats the persistence baseline on PR-AUC.", ""]
+             "the model beats the persistence baseline on PR-AUC.", "",
+             "# Development period", ""]
     show = ["model", "pr_auc", "pr_auc_lo", "pr_auc_hi", "p_better_than_persistence", "roc_auc", "brier",
             "precision", "recall", "alarms_per_year", "positives", "n"]
     for t, g in pooled.groupby("target", sort=False):
         lines += [f"## {t}", "```", g[show].round(3).to_string(index=False), "```", ""]
-    lines += ["## count regression error (out-of-sample, cases)", "```", reg_err.round(1).to_string(), "```"]
+    if hold:
+        ho = pooled_all[pooled_all.period == "holdout"]
+        lines += [f"# Final-period evaluation (target weeks in {hold}): baselines + best development model", ""]
+        for t, g in pooled.groupby("target", sort=False):
+            best = g[~g.model.str.split("[").str[0].isin(BASELINES)].iloc[0].model
+            keep = ho[(ho.target == t) & (ho.model.isin([best] + [m for m in ho.model.unique()
+                                                               if m.split("[")[0] in BASELINES]))]
+            if len(keep):
+                lines += [f"## {t} (selected on development: {best})", "```",
+                          keep[show].round(3).to_string(index=False), "```", ""]
+    lines += ["## count regression error (out-of-sample, cases)", "```", reg_err.round(1).to_string(index=False), "```"]
     if sens is not None:
         lines += ["", "## reporting-delay sensitivity (PR-AUC; delay=1: week t counts unknown)", "```",
                   sens.round(3).to_string(), "```"]
@@ -319,17 +358,24 @@ def _delay_sensitivity(cfg, specs, c):
     for delay, d in [(0, pd.read_csv(cfg["paths"]["processed"] / "model_table.csv", parse_dates=["week_start"])),
                      (1, d1)]:
         o = rolling_origin(cfg, d, ts, sp, log=lambda *_: None)
+        if cfg["model"].get("holdout_from"):
+            o = o[_target_week(o).dt.year < cfg["model"]["holdout_from"]]
         res[f"delay{delay}"] = pooled_table(o, c).set_index(["target", "model"]).pr_auc
     return pd.DataFrame(res)
 
 
 def _interpret(cfg, d_all, tab):
-    """Full-sample fits for interpretation only (not for evaluation)."""
+    """Fit interpretation models on development data only."""
     rows, rules = [], []
     rs = cfg["model"]["random_state"]
+    holdout = cfg["model"].get("holdout_from")
     cols = feature_groups(d_all.columns)["full"]
     for t in [t for t in target_columns(d_all.columns) if "onset" not in t]:
-        d = d_all.dropna(subset=cols + [t])
+        d = d_all
+        if holdout:
+            h = parse_target(t)[2]
+            d = d[d.week_start + pd.to_timedelta(h, unit="W") < pd.Timestamp(f"{holdout}-01-01")]
+        d = d.dropna(subset=cols + [t])
         X, y = d[cols], d[t].astype(int)
         l1 = LassoLogitCV().fit(X, y).model_
         rf = RandomForestClassifier(n_estimators=300, min_samples_leaf=5, n_jobs=-1, random_state=rs).fit(X, y)
