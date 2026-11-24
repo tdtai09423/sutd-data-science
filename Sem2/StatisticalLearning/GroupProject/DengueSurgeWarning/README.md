@@ -49,6 +49,14 @@ cd pipeline
 .venv/bin/python run.py all --config config_brief.yaml
 ```
 
+Exploratory extension (will an ongoing wave turn down?), about 4 minutes:
+
+```bash
+cd pipeline
+.venv/bin/python run.py peak            # refits and writes outputs/peak_summary.md, figures/peak_*.png
+.venv/bin/python run.py peak-evaluate   # re-score saved predictions only
+```
+
 The secondary analysis is a feasibility / cross-check analysis, not a replacement for the main
 analysis: the five-year series has too few surge positives in its later test years for stable
 evaluation.

@@ -8,6 +8,7 @@ The group remains responsible for every claim, number and line of code in this p
 | tool | used for | period |
 |---|---|---|
 | AI coding assistant (Copilot SDK agent in VS Code; earlier sessions with Claude Code) | code for the data pipeline, debugging data-format problems, drafting documentation, LaTeX report and slides | Oct - Nov 2026 |
+| Claude Code (Claude Opus 5.5, desktop app) | exploratory decline extension (`peak.py`), its figures, report and slide text; rubric checklist | 24 Nov 2026 |
 
 ## What it was used for
 
@@ -21,8 +22,14 @@ The group remains responsible for every claim, number and line of code in this p
    * moving-block bootstrap;
    * conversion of count-model forecasts into surge probabilities;
    * the split between the development period and the final test period.
-3. **Figures** (`visualize/make_visuals.py`, `pipeline/src/dengue/eda.py`).
-4. **Writing support**:
+3. **Exploratory decline extension** (`pipeline/src/dengue/peak.py`, `run.py peak`, 24 Nov 2026):
+   * decline target for in-wave weeks and SIR-motivated predictors;
+   * the same rolling-origin evaluation, bootstrap and figures `peak_*.png`;
+   * the corresponding paragraphs in the report (Sections 3-6, Appendix) and two slides.
+   The question came from the group after reviewing the July 2022 failure case; the analysis
+   was added after the main results and is labelled post hoc / exploratory.
+4. **Figures** (`visualize/make_visuals.py`, `pipeline/src/dengue/eda.py`).
+5. **Writing support**:
    * first drafts of `docs/DATA.md`, the READMEs, report sections and slides;
    * conversion of the course PDFs to text so their requirements could be checked.
 
@@ -33,6 +40,9 @@ The group remains responsible for every claim, number and line of code in this p
   implement the whole project end to end."
 * "Implement PDF-reading skills so you can read the requirement documents, and adjust the
   project to the rubric criteria."
+* "Can the model predict when the epidemic stalls? Implement and evaluate it, and explain
+  every chart." (24 Nov 2026)
+* "Check the Requirement folder and give a checklist of which criteria are met." (24 Nov 2026)
 * Decisions put to the group by the assistant and answered by us:
   * use 2012-2022 as the main analysis, with the brief's 2014-2018 file as cross-check and
     secondary analysis;
