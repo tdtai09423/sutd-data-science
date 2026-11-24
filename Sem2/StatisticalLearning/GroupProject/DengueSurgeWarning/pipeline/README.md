@@ -26,6 +26,8 @@ python run.py features   # lagged predictors and surge targets
 python run.py model      # rolling-origin model evaluation
 python run.py all        # run every stage
 python run.py evaluate   # re-score saved out-of-sample predictions (no refits)
+python run.py peak       # exploratory: decline of an ongoing wave (~4 min)
+python run.py peak-evaluate  # re-score saved peak predictions (no refits)
 ```
 
 With `refit_every: 1` the `model` stage takes about 9 hours (every model is refitted every week for

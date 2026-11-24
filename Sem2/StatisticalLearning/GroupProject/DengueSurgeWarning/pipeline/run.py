@@ -9,6 +9,8 @@ Stages (run in order the first time):
   model     CV model comparison           -> outputs/tables/*.csv, outputs/model_summary.md
   all       everything above
   evaluate  re-score saved out-of-sample predictions (no refits) -> same outputs as `model`
+  peak      exploratory: will an ongoing wave turn down? -> outputs/peak_summary.md, *peak_*
+  peak-evaluate  re-score saved peak predictions (no refits)
 """
 import argparse
 import sys
@@ -16,7 +18,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
-from dengue import build, eda, features, fetch, inspect_data, modeling  # noqa: E402
+from dengue import build, eda, features, fetch, inspect_data, modeling, peak  # noqa: E402
 from dengue.config import load_config  # noqa: E402
 
 STAGES = ["fetch", "inspect", "build", "eda", "features", "model"]
@@ -24,7 +26,7 @@ STAGES = ["fetch", "inspect", "build", "eda", "features", "model"]
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("stage", choices=STAGES + ["all", "evaluate"])
+    ap.add_argument("stage", choices=STAGES + ["all", "evaluate", "peak", "peak-evaluate"])
     ap.add_argument("--force", action="store_true", help="re-download even if raw files exist")
     ap.add_argument("--config", default=None)
     a = ap.parse_args()
@@ -46,6 +48,10 @@ def main():
             modeling.run(cfg)
         elif s == "evaluate":
             modeling.run(cfg, reuse_oof=True)
+        elif s == "peak":
+            peak.run(cfg)
+        elif s == "peak-evaluate":
+            peak.run(cfg, reuse_oof=True)
 
 
 if __name__ == "__main__":

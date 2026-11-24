@@ -85,3 +85,12 @@ model:
   targets: null                # null = all; or a list to restrict
   models: null                 # null = all; baselines are always kept
   random_state: 42
+
+peak:                          # exploratory extension: will an ongoing wave turn down? (`run.py peak`)
+  in_wave_min_cases: 100       # week t is "in a wave" if y[t] > 52-week mean (thr_mu) and y[t] >= this
+  decline: {1: 0.10, 2: 0.15, 4: 0.20}   # decl_h: y[t+h] <= (1 - q[h]) * y[t]
+  wave_min_weeks: 8            # waves used for the peak-timing check
+  wave_min_peak: 300
+  alarm_prob: 0.5              # "turn expected" signal used in the peak-timing check
+  bootstrap: 500
+  block: 13                    # in-wave test rows are fewer, so shorter blocks
