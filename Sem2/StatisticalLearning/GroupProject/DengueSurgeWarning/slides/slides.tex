@@ -153,6 +153,38 @@
   \end{columns}
 \end{frame}
 
+\begin{frame}{Follow-up (exploratory): when does a wave turn?}
+  \begin{columns}[T]
+    \column{0.42\textwidth}
+      \small
+      \begin{itemize}
+        \item In-wave week: $y_t>$ 52-week mean and $y_t\ge100$
+        \item Decline target: $y_{t+h}\le(1-q_h)\,y_t$, $q_h=10/15/20\%$ for $h=1/2/4$
+        \item SIR idea: a wave peaks when $R_t<1$ (fewer susceptibles, season, control)
+        \item New features: deceleration, cases in past 26/52 weeks and in the wave,
+          wave length, distance to 52-week max
+        \item Same rolling-origin design; added after the main results (post hoc)
+      \end{itemize}
+    \column{0.56\textwidth}
+      \includegraphics[width=\linewidth]{peak_01_phase_portrait.png}
+      \scriptsize Peaks range from 400 to 1{,}791 cases ($\log(1+y)$ 6.0--7.5):
+      no fixed level marks the end of a wave.
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Turn of a wave: results}
+  \begin{center}
+    \includegraphics[width=0.95\linewidth]{peak_05_peak_aligned.png}
+  \end{center}
+  \small
+  \begin{itemize}
+    \item Development (92 in-wave weeks): best PR-AUC 0.44 / 0.50 / 0.56 vs momentum
+      0.29 / 0.24 / 0.28, but the seasonal baseline already reaches 0.47 / 0.43 / 0.45.
+    \item Probabilities rise mostly \emph{after} the peak; at $h=4$ they rose $\sim$8 weeks
+      early in 2020 and 2022, not in 2019. 2022: 0.32 / 0.60 / 0.90 (one wave).
+  \end{itemize}
+\end{frame}
+
 \begin{frame}{Limitations and responsible use}
   \begin{itemize}
     \item Few outbreaks and very few onset positives mean wide uncertainty.
@@ -173,7 +205,11 @@
     \item Persistence must be beaten before claiming useful early warning.
     \item Count regression helps for growth and onset surges, but few events mean wide intervals.
     \item Weather adds no measurable skill beyond recent counts at 1--4 weeks.
+    \item The turn of a wave is also hard to anticipate: no fixed peak level, little gain
+      over seasonality.
   \end{enumerate}
+  \vspace{0.3em}
+  \textbf{Next step:} prospective test on post-2022 counts, adding cluster-level and serotype data.
   \vspace{1em}
   \centering
   \Large Questions?
@@ -184,9 +220,18 @@
   \begin{itemize}
     \item Pipeline, configuration, processed weekly snapshots and source manifest are included.
     \item Main run: \texttt{cd pipeline \&\& .venv/bin/python run.py all}
+    \item Exploratory decline analysis: \texttt{.venv/bin/python run.py peak} ($\sim$4 min)
     \item AI-use disclosure: \texttt{AI\_USE.md}
     \item Contributions: \textcolor{red}{[to be completed by the group]}
   \end{itemize}
+\end{frame}
+
+\begin{frame}{Appendix: decline targets, development PR-AUC}
+  \begin{center}
+    \includegraphics[width=\linewidth]{peak_03_pr_auc.png}
+  \end{center}
+  \small Dotted: base rate; red dashed: momentum baseline; red dot: best model.
+  95\% block-bootstrap intervals (13-week blocks) overlap with the seasonal baseline.
 \end{frame}
 
 \end{document}
