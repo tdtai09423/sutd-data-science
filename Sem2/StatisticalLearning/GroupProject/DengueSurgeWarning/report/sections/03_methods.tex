@@ -29,6 +29,18 @@ count-model errors are also reported as MAE/RMSE in cases per week. Uncertainty 
 500 moving-block bootstrap draws with 26-week blocks. A one-week reporting-delay
 sensitivity re-runs the primary one-week targets with counts from week $t$ unavailable.
 
+\textbf{Exploratory extension: when does a wave turn?} All targets above ask whether counts
+will rise. As a complementary, post hoc analysis we ask whether an ongoing wave will turn down.
+A week is \emph{in a wave} if $y_t$ exceeds its 52-week mean and $y_t\ge100$; the decline target
+is $y_{t+h}\le(1-q_h)\,y_t$ with $q_h=0.10,0.15,0.20$ for $h=1,2,4$, scored on in-wave weeks
+only. Motivated by SIR dynamics, where a wave peaks once the effective reproduction number
+falls below one (through depletion of susceptibles, season or control), we add the change in
+log growth (deceleration), log cases over the past 26 and 52 weeks and since the wave started,
+wave length and the distance to the 52-week maximum. Baselines are the prior, the seasonal rate
+and a momentum rule (last weekly growth); models are logistic regression on cases with and
+without these features, lasso with weather, random forest and ridge on log counts, under the
+same rolling-origin design.
+
 \textbf{Holdout qualification.} Earlier exploratory runs pooled forecasts through 2022
 before the final split was selected. In addition, the rolling evaluation updates using
 earlier observed outcomes within 2022. Thus this is a final-period prequential check,
