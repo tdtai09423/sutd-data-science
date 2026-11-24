@@ -62,3 +62,27 @@ Diễn giải:
 
 Diễn giải kết quả, số liệu CI, giới hạn và cảnh báo về việc đã xem các exploratory run đến
 2022 cần được đọc cùng báo cáo chính; không suy luận hiệu quả triển khai chỉ từ các hình.
+
+## Mở rộng thăm dò: dịch khi nào khựng lại? (`run.py peak`)
+
+```bash
+cd pipeline && .venv/bin/python run.py peak            # ~4 phút, refit mỗi tuần
+.venv/bin/python run.py peak-evaluate                   # chỉ chấm lại + vẽ lại từ dự báo đã lưu
+```
+
+Câu hỏi: tuần t đang ở trong một đợt dịch (y[t] > trung bình 52 tuần và y[t] ≥ 100), sau h tuần
+số ca có giảm rõ không? `decl_h`: y[t+h] ≤ (1 − q)·y[t], q = 10% / 15% / 20% cho h = 1 / 2 / 4.
+Đặc trưng mới (theo lý thuyết SIR): gia tốc tăng trưởng, số ca tích luỹ 26/52 tuần và trong đợt
+dịch (proxy cạn người cảm nhiễm), độ dài đợt dịch, khoảng cách tới đỉnh 52 tuần. Thiết kế đánh giá
+giống phân tích chính (rolling origin từ 2016, purge theo h, 2022 báo cáo riêng). Đây là phân tích
+thăm dò, được thêm sau khi đã xem kết quả chính, chỉ có 4 đợt dịch lớn trong giai đoạn kiểm định.
+
+| File (`pipeline/outputs/figures/`) | Ý nghĩa | Suy ra |
+|---|---|---|
+| `peak_01_phase_portrait.png` | Quỹ đạo (mức log, tốc độ tăng 4 tuần) của từng đợt; chấm = tuần đỉnh | Đỉnh nằm ở log(1+ca) từ 6.0 đến 7.5: không có "trần" cố định như 7 |
+| `peak_02_target_definition.png` | Tuần trong đợt dịch (tô cam) và tuần có giảm ≥15% sau 2 tuần (đỏ) | Nhãn giảm tập trung sau đỉnh; trước đỉnh chỉ có vài lần giảm do nhiễu |
+| `peak_03_pr_auc.png` | PR-AUC development và CI cho 9 mô hình, 3 horizon | Mô hình ca bệnh 0.44–0.56 so với base rate 0.26–0.36; seasonal baseline đã ~0.43–0.47; CI chồng lấn |
+| `peak_04_timelines.png` | P(giảm sau 2 tuần) theo thời gian trong từng đợt dịch | Xác suất chỉ tăng *sau* đỉnh và hầu như không vượt 0.5: mô hình nhận ra pha giảm, chưa báo trước được đỉnh |
+| `peak_05_peak_aligned.png` | Xác suất căn theo số tuần so với đỉnh | Với h=4, xác suất tăng dần từ ~−8 tuần (2020, 2022): có tín hiệu "đợt dịch đang chậm lại", nhưng yếu và không đều giữa các đợt |
+| `peak_06_coefficients.png` | Hệ số logistic chuẩn hoá (decl_h2) | Số ca tích luỹ, vị trí so với đỉnh 52 tuần và mùa có trọng số lớn; các biến tương quan cao nên không đọc từng hệ số như hiệu ứng nhân quả |
+| `peak_07_calibration_holdout.png` | Calibration và so sánh development / 2022 | Xác suất bị co về 0.2–0.45 (thiếu độ phân giải); 2022 h=4 đạt 0.90 nhưng chỉ có 12 tuần dương tính trong một đợt |
